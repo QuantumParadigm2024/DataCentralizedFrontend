@@ -8,15 +8,15 @@ import { Add, Folder, ArrowBack, UploadFile, Delete } from "@mui/icons-material"
 const AllFiles = ({ searchTerm }) => {
     const [open, setOpen] = useState(false);
     const [folderName, setFolderName] = useState("");
-    const [folders, setFolders] = useState([]); // Stores created folders
-    const [currentFolder, setCurrentFolder] = useState(null); // Tracks opened folder
-    const [files, setFiles] = useState({}); // Stores files inside folders
+    const [folders, setFolders] = useState([]);
+    const [currentFolder, setCurrentFolder] = useState(null); 
+    const [files, setFiles] = useState({}); 
 
-    // Open/Close Dialog
+    
     const handleOpen = () => setOpen(true);
     const handleClose = () => {
         setOpen(false);
-        setFolderName(""); // Reset input
+        setFolderName(""); 
     };
 
     // Handle Folder Creation
