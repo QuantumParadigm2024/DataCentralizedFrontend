@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import {
     Box, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle,
-    FormControl, RadioGroup, FormControlLabel, Radio, Grid
+    FormControl, RadioGroup, FormControlLabel, Radio, Grid,
+    TextField
 } from "@mui/material";
-import { UploadFile } from "@mui/icons-material";
+import { Search, UploadFile } from "@mui/icons-material";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axiosInstance from "../utils/axiosInstance";
@@ -79,6 +80,29 @@ const AllFiles = () => {
     return (
         <Box sx={{ width: "100%", p: 2 }}>
             <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
+            <Grid container alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                <Grid item xs={10} sm={8} md={6}>
+                    <TextField
+                        variant="outlined"
+                        size="small"
+                        placeholder="Search files and folders"
+                        fullWidth
+                        InputProps={{
+                            startAdornment: (<Search sx={{ color: "gray", mr: 1 }} />),
+                            sx: { borderRadius: 5 }
+                        }}
+                    />
+                </Grid>
+
+                {/* Upload Files button moved to top-right */}
+                <Grid item>
+                    <label htmlFor="file-upload">
+                        <Button variant="contained" component="span" startIcon={<UploadFile />}>
+                            Upload Files
+                        </Button>
+                    </label>
+                </Grid>
+            </Grid>
 
             <Grid container justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
                 <Typography variant="h5" sx={{ fontWeight: "bold", fontSize: "18px" }}>All Files</Typography>
@@ -91,16 +115,12 @@ const AllFiles = () => {
                     style={{ display: "none" }}
                     id="file-upload"
                 />
-                <label htmlFor="file-upload">
-                    <Button variant="contained" component="span" startIcon={<UploadFile />}>
-                        Upload Files
-                    </Button>
-                </label>
+
             </Grid>
 
             {/* Fetch Data Button */}
             <Button variant="contained" color="primary" onClick={() => setRefreshData((prev) => !prev)}>
-                Fetch Data
+                All Data
             </Button>
 
             {/* Category Selection Dialog */}

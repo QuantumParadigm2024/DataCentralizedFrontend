@@ -1,4 +1,4 @@
-import { CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, Button } from '@mui/material';
+import { CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import axiosInstance from '../utils/axiosInstance';
 
@@ -20,7 +20,7 @@ const DataTable = ({ refreshData }) => {
         try {
             const response = await axiosInstance.get("planotech-inhouse/getAll/data");
 
-            console.log("API Response:", response.data); // Debugging
+            console.log("API Response:", response.data);
 
             if (Array.isArray(response.data)) {
                 setData(response.data);

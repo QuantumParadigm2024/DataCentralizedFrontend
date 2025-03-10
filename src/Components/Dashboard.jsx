@@ -5,12 +5,11 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import SideBar from "./SideBar";
 import Bin from "./Bin";
-import Recent from "./Recent";
+import Recen from "./Recent";
 import AllFiles from "./AllFiles";
 import Collections from "./Collections";
 import Favourites from "./Favourites";
 import { AccountCircle, Search } from "@mui/icons-material";
-import dashboardbg from "../Assets/Planotech Logo Black.png";
 
 const Dashboard = () => {
     const [selectedContent, setSelectedContent] = useState("allFiles");
@@ -24,7 +23,7 @@ const Dashboard = () => {
 
         switch (selectedContent) {
             case "recent":
-                return <Recent {...props} />;
+                return <Recen {...props} />;
             case "bin":
                 return <Bin {...props} />;
             case "collections":
@@ -62,7 +61,6 @@ const Dashboard = () => {
                     p: 3,
                     ml: { md: "250px", xs: "0" },
                     height: "100vh",
-                    backgroundImage: `url(${dashboardbg})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     backgroundRepeat: "no-repeat",
@@ -73,29 +71,6 @@ const Dashboard = () => {
                         <MenuIcon />
                     </IconButton>
                 )}
-
-                <Grid container alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                    <Grid item xs={10} sm={8} md={6}>
-                        <TextField
-                            variant="outlined"
-                            size="small"
-                            placeholder="Search files and folders"
-                            fullWidth
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)} // Update search term
-                            InputProps={{
-                                startAdornment: (<Search sx={{ color: "gray", mr: 1 }} />),
-                                sx: { borderRadius: 5 }
-                            }}
-                        />
-                    </Grid>
-
-                    <Grid item xs={2} sm={4} md={2} sx={{ textAlign: "right" }}>
-                        <IconButton>
-                            <AccountCircle sx={{ fontSize: 40 }} />
-                        </IconButton>
-                    </Grid>
-                </Grid>
 
                 {renderContent()}
             </Grid>
