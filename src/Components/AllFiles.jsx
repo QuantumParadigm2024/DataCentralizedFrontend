@@ -4,7 +4,10 @@ import {
     FormControl, RadioGroup, FormControlLabel, Radio, Grid
 } from "@mui/material";
 import { UploadFile } from "@mui/icons-material";
-import axiosInstance from "../utils/axiosInstance"; // Ensure this file exists
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import axiosInstance from "../utils/axiosInstance";
+import DataTable from "./DataTable";
 
 const AllFiles = () => {
     const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
@@ -12,6 +15,7 @@ const AllFiles = () => {
     const [selectedCategory, setSelectedCategory] = useState("");
     const [team, setTeam] = useState("");
     const [selectedFiles, setSelectedFiles] = useState([]);
+    const [refreshData, setRefreshData] = useState(false); // Fetch data only when button is clicked
 
     // Open category selection popup
     const handleOpenCategoryDialog = (event) => {
@@ -31,23 +35,23 @@ const AllFiles = () => {
     const handleCloseTeamDialog = () => {
         setOpenTeamDialog(false);
         setTeam("");
-        setSelectedFiles([]); // Clear files after successful upload
+        setSelectedFiles([]);
     };
 
     // Handle category selection and proceed to team selection
     const handleProceedToTeamDialog = () => {
         if (!selectedCategory) {
-            alert("Please select a category before proceeding.");
+            toast.error("Please select a category before proceeding.");
             return;
         }
-        setOpenCategoryDialog(false); // Close category dialog
-        setOpenTeamDialog(true); // Open team selection dialog
+        setOpenCategoryDialog(false);
+        setOpenTeamDialog(true);
     };
 
     // Final file upload function
     const handleUpload = async () => {
         if (!team) {
-            alert("Please select a team before uploading.");
+            toast.error("Please select a team before uploading.");
             return;
         }
 
@@ -64,18 +68,21 @@ const AllFiles = () => {
                 },
             });
 
-            alert("Files uploaded successfully!");
-            handleCloseTeamDialog(); // Close team dialog after upload
+            toast.success("Files uploaded successfully!");
+            handleCloseTeamDialog();
         } catch (error) {
             console.error("Upload failed:", error);
-            alert("File upload failed. Please try again.");
+            toast.error("File upload failed. Please try again.");
         }
     };
 
     return (
         <Box sx={{ width: "100%", p: 2 }}>
+            <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
+
             <Grid container justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
                 <Typography variant="h5" sx={{ fontWeight: "bold", fontSize: "18px" }}>All Files</Typography>
+
                 <input
                     type="file"
                     name="file"
@@ -90,6 +97,11 @@ const AllFiles = () => {
                     </Button>
                 </label>
             </Grid>
+
+            {/* Fetch Data Button */}
+            <Button variant="contained" color="primary" onClick={() => setRefreshData((prev) => !prev)}>
+                Fetch Data
+            </Button>
 
             {/* Category Selection Dialog */}
             <Dialog open={openCategoryDialog} onClose={handleCloseCategoryDialog} fullWidth maxWidth="sm">
@@ -130,6 +142,10 @@ const AllFiles = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <Box>
+                <DataTable refreshData={refreshData} />
+            </Box>
         </Box>
     );
 };
