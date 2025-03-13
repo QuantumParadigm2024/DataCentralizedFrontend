@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-    Box, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle,
+    Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
     FormControl, RadioGroup, FormControlLabel, Radio, Grid,
     TextField
 } from "@mui/material";
@@ -16,9 +16,10 @@ const AllFiles = () => {
     const [selectedCategory, setSelectedCategory] = useState("");
     const [team, setTeam] = useState("");
     const [selectedFiles, setSelectedFiles] = useState([]);
-    const [refreshData, setRefreshData] = useState(false); // Fetch data only when button is clicked
+    const [refreshData, setRefreshData] = useState(false);
+    const [dataFetched, setDataFetched] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
 
-    // Open category selection popup
     const handleOpenCategoryDialog = (event) => {
         const files = Array.from(event.target.files);
         if (files.length === 0) return;
@@ -26,20 +27,17 @@ const AllFiles = () => {
         setOpenCategoryDialog(true);
     };
 
-    // Close category popup
     const handleCloseCategoryDialog = () => {
         setOpenCategoryDialog(false);
         setSelectedCategory("");
     };
 
-    // Close team popup
     const handleCloseTeamDialog = () => {
         setOpenTeamDialog(false);
         setTeam("");
         setSelectedFiles([]);
     };
 
-    // Handle category selection and proceed to team selection
     const handleProceedToTeamDialog = () => {
         if (!selectedCategory) {
             toast.error("Please select a category before proceeding.");
@@ -49,7 +47,10 @@ const AllFiles = () => {
         setOpenTeamDialog(true);
     };
 
-    // Final file upload function
+    const handleDataFetched = () => {
+        setRefreshData((prev) => !prev);
+        setDataFetched(true);
+    }
     const handleUpload = async () => {
         if (!team) {
             toast.error("Please select a team before uploading.");
@@ -78,93 +79,105 @@ const AllFiles = () => {
     };
 
     return (
-        <Box sx={{ width: "100%", p: 2 }}>
+        <Box sx={{ width: "100%", p: 1, overflow: "hidden" }}>
             <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
-            <Grid container alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                <Grid item xs={10} sm={8} md={6}>
-                    <TextField
-                        variant="outlined"
-                        size="small"
-                        placeholder="Search files and folders"
-                        fullWidth
-                        InputProps={{
-                            startAdornment: (<Search sx={{ color: "gray", mr: 1 }} />),
-                            sx: { borderRadius: 5 }
-                        }}
+
+            <Box
+                sx={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 100,
+                    background: "#fff",
+                    p: 2,
+                    boxShadow: "0px 2px 5px rgba(0,0,0,0.1)",
+                    borderRadius: "8px",
+                }}
+            >
+                <Grid container alignItems="center" justifyContent="space-between">
+                    <Grid item xs={10} sm={8} md={6}>
+                        <TextField
+                            variant="outlined"
+                            size="small"
+                            placeholder="Search files and folders"
+                            fullWidth
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            InputProps={{
+                                startAdornment: (<Search sx={{ color: "gray", mr: 1 }} />),
+                                sx: { borderRadius: 5 }
+                            }}
+                        />
+                    </Grid>
+
+                    <Box>
+                        <label htmlFor="file-upload">
+                            <Button variant="contained" component="span" startIcon={<UploadFile />}>
+                                Upload Files
+                            </Button>
+                        </label>
+                    </Box>
+                </Grid>
+            </Box>
+
+            <Box sx={{ mt: 2 }}>
+                <Grid container justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                    <input
+                        type="file"
+                        name="file"
+                        multiple
+                        onChange={handleOpenCategoryDialog}
+                        style={{ display: "none" }}
+                        id="file-upload"
                     />
                 </Grid>
 
-                {/* Upload Files button moved to top-right */}
-                <Grid item>
-                    <label htmlFor="file-upload">
-                        <Button variant="contained" component="span" startIcon={<UploadFile />}>
-                            Upload Files
+                {!dataFetched && (
+                    <Button variant="contained" color="primary" onClick={handleDataFetched}>
+                        Get All Files Data
+                    </Button>
+                )}
+
+                <Dialog open={openCategoryDialog} onClose={handleCloseCategoryDialog} fullWidth maxWidth="sm">
+                    <DialogTitle>Select Category</DialogTitle>
+                    <DialogContent>
+                        <FormControl component="fieldset">
+                            <RadioGroup value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                                {["Event Clients", "Venders", "Corporate", "Executive Data", "Pharma", "Customer", "Other"].map((category) => (
+                                    <FormControlLabel key={category} value={category} control={<Radio />} label={category} />
+                                ))}
+                            </RadioGroup>
+                        </FormControl>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCloseCategoryDialog} color="secondary">Cancel</Button>
+                        <Button onClick={handleProceedToTeamDialog} variant="contained" disabled={!selectedCategory}>
+                            Next
                         </Button>
-                    </label>
-                </Grid>
-            </Grid>
+                    </DialogActions>
+                </Dialog>
 
-            <Grid container justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                <Typography variant="h5" sx={{ fontWeight: "bold", fontSize: "18px" }}>All Files</Typography>
+                <Dialog open={openTeamDialog} onClose={handleCloseTeamDialog} fullWidth maxWidth="sm">
+                    <DialogTitle>Select Team</DialogTitle>
+                    <DialogContent>
+                        <FormControl component="fieldset">
+                            <RadioGroup value={team} onChange={(e) => setTeam(e.target.value)}>
+                                {["IT team", "Design team", "Marketing team", "Audio Fusion", "Other"].map((enteredBy) => (
+                                    <FormControlLabel key={enteredBy} value={enteredBy} control={<Radio />} label={enteredBy} />
+                                ))}
+                            </RadioGroup>
+                        </FormControl>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCloseTeamDialog} color="secondary">Cancel</Button>
+                        <Button onClick={handleUpload} variant="contained" disabled={!team}>
+                            Upload
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            </Box>
 
-                <input
-                    type="file"
-                    name="file"
-                    multiple
-                    onChange={handleOpenCategoryDialog}
-                    style={{ display: "none" }}
-                    id="file-upload"
-                />
-
-            </Grid>
-
-            {/* Fetch Data Button */}
-            <Button variant="contained" color="primary" onClick={() => setRefreshData((prev) => !prev)}>
-                All Data
-            </Button>
-
-            {/* Category Selection Dialog */}
-            <Dialog open={openCategoryDialog} onClose={handleCloseCategoryDialog} fullWidth maxWidth="sm">
-                <DialogTitle>Select Category</DialogTitle>
-                <DialogContent>
-                    <FormControl component="fieldset">
-                        <RadioGroup value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                            {["Event Clients", "Venders", "Corporate", "Executive Data", "Pharma", "Customer", "Other"].map((category) => (
-                                <FormControlLabel key={category} value={category} control={<Radio />} label={category} />
-                            ))}
-                        </RadioGroup>
-                    </FormControl>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseCategoryDialog} color="secondary">Cancel</Button>
-                    <Button onClick={handleProceedToTeamDialog} variant="contained" disabled={!selectedCategory}>
-                        Next
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Team Selection Dialog */}
-            <Dialog open={openTeamDialog} onClose={handleCloseTeamDialog} fullWidth maxWidth="sm">
-                <DialogTitle>Select Team</DialogTitle>
-                <DialogContent>
-                    <FormControl component="fieldset">
-                        <RadioGroup value={team} onChange={(e) => setTeam(e.target.value)}>
-                            {["IT team", "Design team", "Marketing team", "Audio Fusion", "Other"].map((enteredBy) => (
-                                <FormControlLabel key={enteredBy} value={enteredBy} control={<Radio />} label={enteredBy} />
-                            ))}
-                        </RadioGroup>
-                    </FormControl>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseTeamDialog} color="secondary">Cancel</Button>
-                    <Button onClick={handleUpload} variant="contained" disabled={!team}>
-                        Upload
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            <Box>
-                <DataTable refreshData={refreshData} />
+            <Box sx={{ mt: 2 }}>
+                <DataTable refreshData={refreshData} searchTerm={searchTerm} />
             </Box>
         </Box>
     );

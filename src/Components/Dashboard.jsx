@@ -1,44 +1,41 @@
 import React, { useState } from "react";
 import {
-    Box, Grid, Drawer, IconButton, useMediaQuery, useTheme, TextField
+    Box, Grid, Drawer, IconButton, useMediaQuery, useTheme
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import SideBar from "./SideBar";
 import Bin from "./Bin";
-import Recen from "./Recent";
+import Recent from "./Recent";
 import AllFiles from "./AllFiles";
 import Collections from "./Collections";
 import Favourites from "./Favourites";
-import { AccountCircle, Search } from "@mui/icons-material";
 
 const Dashboard = () => {
     const [selectedContent, setSelectedContent] = useState("allFiles");
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState(""); // Search state
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
     const renderContent = () => {
-        const props = { searchTerm }; 
 
         switch (selectedContent) {
             case "recent":
-                return <Recen {...props} />;
+                return <Recent />;
             case "bin":
-                return <Bin {...props} />;
+                return <Bin />;
             case "collections":
-                return <Collections {...props} />;
+                return <Collections />;
             case "favourites":
-                return <Favourites {...props} />;
+                return <Favourites />;
             default:
-                return <AllFiles {...props} />;
+                return <AllFiles />;
         }
     };
 
     return (
-        <Grid container sx={{ width: "100%", height: "100vh" }}>
+        <Grid container sx={{ width: "100%", height: "100vh", overflow: "hidden" }}>
             {!isMobile && (
-                <Grid item md={3} lg={2} sx={{ height: "100vh", position: "fixed" }}>
+                <Grid item md={3} lg={2} sx={{ height: "100vh", position: "fixed", overflow: "hidden" }}>
                     <SideBar setSelectedContent={setSelectedContent} />
                 </Grid>
             )}
@@ -53,7 +50,6 @@ const Dashboard = () => {
                 </Box>
             </Drawer>
 
-            {/* Main content with background image */}
             <Grid
                 item xs={12} md={9} lg={10}
                 sx={{
@@ -64,6 +60,7 @@ const Dashboard = () => {
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     backgroundRepeat: "no-repeat",
+
                 }}
             >
                 {isMobile && (

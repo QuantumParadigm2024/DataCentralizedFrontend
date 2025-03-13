@@ -36,7 +36,7 @@ const SideBar = ({ setSelectedContent }) => {
                 </List>
 
             </Box>
-            <Grid container justifyContent="flex-start" alignItems="center" sx={{ p: 1, pb: 3}}>
+            <Grid container justifyContent="flex-start" alignItems="center" sx={{ p: .5, pb: 3}}>
                 <IconButton>
                     <AccountCircle sx={{ fontSize: 30 }} />
                 </IconButton>
