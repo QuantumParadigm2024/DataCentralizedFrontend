@@ -2,6 +2,10 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Dashboard from './Components/Dashboard'
+import Recent from './Components/Recent'
+import Bin from './Components/Bin'
+import Collections from './Components/Collections'
+import './global.css'
 import DataTable from './Components/DataTable'
 
 const App = () => {
