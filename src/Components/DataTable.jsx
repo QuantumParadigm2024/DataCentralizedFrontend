@@ -1,7 +1,6 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import {
-    CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button
+    CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, Popover
 } from "@mui/material";
 import InfoIcon from '@mui/icons-material/Info';
 import axiosInstance from "../utils/axiosInstance";
@@ -12,6 +11,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [pageNo, setPageNo] = useState(0);
+    const [anchorEl, setAnchorEl] = useState(null);
     const [selectedRow, setSelectedRow] = useState(null);
     const pageSize = 50;
 
@@ -67,8 +67,17 @@ const DataTable = ({ refreshData, searchTerm }) => {
         }
     };
 
-    const handleOpenPopup = (row) => setSelectedRow(row);
-    const handleClosePopup = () => setSelectedRow(null);
+    const handlePopoverOpen = (event, row) => {
+        setAnchorEl(event.currentTarget);
+        setSelectedRow(row);
+    };
+
+    const handlePopoverClose = () => {
+        setAnchorEl(null);
+        setSelectedRow(null);
+    };
+
+    const open = Boolean(anchorEl);
 
     const handleNextPage = () => fetchData(pageNo + 1);
     const handlePrevPage = () => fetchData(pageNo > 0 ? pageNo - 1 : 1);
@@ -101,18 +110,19 @@ const DataTable = ({ refreshData, searchTerm }) => {
                             {filteredData.map((row, index) => (
                                 <TableRow key={row.id} sx={{ '& td': { height: "30px" } }}>
                                     <TableCell>{index + 1 + pageNo * pageSize}</TableCell>
-                                    <TableCell>{row.name}</TableCell><TableCell>
-                                        <a href={`mailto:${row.email}`}>
-                                            {row.email}
-                                        </a>
-                                    </TableCell>
+                                    <TableCell>{row.name}</TableCell>
+                                    <TableCell>{row.email}</TableCell>
                                     <TableCell>{row.phoneNumber}</TableCell>
                                     <TableCell>{row.designation}</TableCell>
                                     <TableCell>{row.address}</TableCell>
                                     <TableCell>{row.companyName}</TableCell>
                                     <TableCell>{row.industryType}</TableCell>
                                     <TableCell>
-                                        <IconButton size="small" onClick={() => handleOpenPopup(row)}>
+                                        <IconButton
+                                            size="small"
+                                            onMouseEnter={(e) => handlePopoverOpen(e, row)}
+                                            onMouseLeave={handlePopoverClose}
+                                        >
                                             <InfoIcon />
                                         </IconButton>
                                     </TableCell>
@@ -128,21 +138,21 @@ const DataTable = ({ refreshData, searchTerm }) => {
                     <button onClick={handleNextPage}>Next</button>
                 </div>
             )}
-            <Dialog open={Boolean(selectedRow)} onClose={handleClosePopup} sx={{justifyItems: "flex-end"}}>
-                <DialogTitle>More Information</DialogTitle>
-                <DialogContent>
-                    {selectedRow && (
-                        <div>
-                            <Typography><strong>Category:</strong> {selectedRow.category}</Typography>
-                            <Typography><strong>Entry Date:</strong> {selectedRow.entryDate}</Typography>
-                            <Typography><strong>Entered By:</strong> {selectedRow.enteredBy}</Typography>
-                        </div>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClosePopup}>Close</Button>
-                </DialogActions>
-            </Dialog>
+            <Popover
+                open={open}
+                anchorEl={anchorEl}
+                onClose={handlePopoverClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                {selectedRow && (
+                    <div style={{ padding: "16px" }}>
+                        <Typography><strong>Category:</strong> {selectedRow.category}</Typography>
+                        <Typography><strong>Entry Date:</strong> {selectedRow.entryDate}</Typography>
+                        <Typography><strong>Entered By:</strong> {selectedRow.enteredBy}</Typography>
+                    </div>
+                )}
+            </Popover>
         </Paper>
     );
 };
