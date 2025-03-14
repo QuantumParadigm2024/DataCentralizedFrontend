@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
     Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
     FormControl, RadioGroup, FormControlLabel, Radio, Grid,
@@ -7,8 +7,8 @@ import {
 import { Search, UploadFile } from "@mui/icons-material";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axiosInstance from "../utils/axiosInstance";
-import DataTable from "./DataTable";
+import axiosInstance from "../Helper/AxiosInstance";
+import DataTable from "../Components/DataTable";
 
 const AllFiles = () => {
     const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
