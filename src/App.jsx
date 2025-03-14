@@ -6,15 +6,14 @@ import Recent from './Components/Recent'
 import Bin from './Components/Bin'
 import Collections from './Components/Collections'
 import './global.css'
+import DataTable from './Components/DataTable'
 
 const App = () => {
     return (
         <BrowserRouter>
             <Routes>
                 <Route path='/' element={<Dashboard />} />
-                <Route path='recent' element={<Recent />} />
-                <Route path='bin' element={<Bin />} />
-                <Route path='collections' element={<Collections />} />
+                <Route path='/dataTable' element={<DataTable/>} />
             </Routes>
         </BrowserRouter>
     )

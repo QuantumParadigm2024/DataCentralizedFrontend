@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-    Box, Grid, Drawer, IconButton, useMediaQuery, useTheme, TextField
+    Box, Grid, Drawer, IconButton, useMediaQuery, useTheme
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import SideBar from "./SideBar";
@@ -9,37 +9,33 @@ import Recent from "./Recent";
 import AllFiles from "./AllFiles";
 import Collections from "./Collections";
 import Favourites from "./Favourites";
-import { AccountCircle, Search } from "@mui/icons-material";
-import dashboardbg from "../Assets/Planotech Logo Black.png";
 
 const Dashboard = () => {
     const [selectedContent, setSelectedContent] = useState("allFiles");
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState(""); // Search state
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
     const renderContent = () => {
-        const props = { searchTerm }; 
 
         switch (selectedContent) {
             case "recent":
-                return <Recent {...props} />;
+                return <Recent />;
             case "bin":
-                return <Bin {...props} />;
+                return <Bin />;
             case "collections":
-                return <Collections {...props} />;
+                return <Collections />;
             case "favourites":
-                return <Favourites {...props} />;
+                return <Favourites />;
             default:
-                return <AllFiles {...props} />;
+                return <AllFiles />;
         }
     };
 
     return (
-        <Grid container sx={{ width: "100%", height: "100vh" }}>
+        <Grid container sx={{ width: "100%", height: "100vh", overflow: "hidden" }}>
             {!isMobile && (
-                <Grid item md={3} lg={2} sx={{ height: "100vh", position: "fixed" }}>
+                <Grid item md={3} lg={2} sx={{ height: "100vh", position: "fixed", overflow: "hidden" }}>
                     <SideBar setSelectedContent={setSelectedContent} />
                 </Grid>
             )}
@@ -54,7 +50,6 @@ const Dashboard = () => {
                 </Box>
             </Drawer>
 
-            {/* Main content with background image */}
             <Grid
                 item xs={12} md={9} lg={10}
                 sx={{
@@ -62,10 +57,10 @@ const Dashboard = () => {
                     p: 3,
                     ml: { md: "250px", xs: "0" },
                     height: "100vh",
-                    backgroundImage: `url(${dashboardbg})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     backgroundRepeat: "no-repeat",
+
                 }}
             >
                 {isMobile && (
@@ -73,29 +68,6 @@ const Dashboard = () => {
                         <MenuIcon />
                     </IconButton>
                 )}
-
-                <Grid container alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                    <Grid item xs={10} sm={8} md={6}>
-                        <TextField
-                            variant="outlined"
-                            size="small"
-                            placeholder="Search files and folders"
-                            fullWidth
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)} // Update search term
-                            InputProps={{
-                                startAdornment: (<Search sx={{ color: "gray", mr: 1 }} />),
-                                sx: { borderRadius: 5 }
-                            }}
-                        />
-                    </Grid>
-
-                    <Grid item xs={2} sm={4} md={2} sx={{ textAlign: "right" }}>
-                        <IconButton>
-                            <AccountCircle sx={{ fontSize: 40 }} />
-                        </IconButton>
-                    </Grid>
-                </Grid>
 
                 {renderContent()}
             </Grid>
