@@ -1,16 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
-    CircularProgress,
-    Paper,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Typography
-} from "@mui/material";
+    CircularProgress,Paper,Table,TableBody,TableCell,TableContainer,TableHead,TableRow,Typography,IconButton} from "@mui/material";
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import axiosInstance from "../utils/axiosInstance";
+import InfoIcon from '@mui/icons-material/Info';
 
 const DataTable = ({ refreshData, searchTerm }) => {
     const [data, setData] = useState([]);
@@ -18,6 +11,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [pageNo, setPageNo] = useState(0);
+    const [visibleRows, setVisibleRows] = useState({});
     const pageSize = 50;
 
     useEffect(() => {
@@ -72,8 +66,15 @@ const DataTable = ({ refreshData, searchTerm }) => {
         }
     };
 
+    const handleToggleVisibility = (id) => {
+        setVisibleRows((prev) => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
+    };
+
     const handleNextPage = () => fetchData(pageNo + 1);
-    const handlePrevPage = () => fetchData(pageNo > 1 ? pageNo - 1 : 1);
+    const handlePrevPage = () => fetchData(pageNo > 0 ? pageNo - 1 : 1);
 
     return (
         <Paper sx={{ width: "100%", overflow: "hidden", borderRadius: "8px", boxShadow: 3 }}>
@@ -87,8 +88,8 @@ const DataTable = ({ refreshData, searchTerm }) => {
                 ) : (
                     <Table stickyHeader>
                         <TableHead>
-                            <TableRow sx={{ '& th': { backgroundColor: "#f4f4f4", fontWeight: "bold", height: "40px" } }}>
-                                <TableCell>ID</TableCell>
+                            <TableRow sx={{ '& th': { backgroundColor: "#eaf1f0", fontWeight: "bold", height: "40px" } }}>
+                                <TableCell>SL NO</TableCell>
                                 <TableCell>Name</TableCell>
                                 <TableCell>Email</TableCell>
                                 <TableCell>Phone Number</TableCell>
@@ -102,9 +103,9 @@ const DataTable = ({ refreshData, searchTerm }) => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {filteredData.map((row) => (
-                                <TableRow key={row.id} sx={{ '& td': { height: "30px"} }}>
-                                    <TableCell>{row.id}</TableCell>
+                            {filteredData.map((row, index) => (
+                                <TableRow key={row.id} sx={{ '& td': { height: "30px" } }}>
+                                    <TableCell>{index + 1 + pageNo * pageSize}</TableCell>
                                     <TableCell>{row.name}</TableCell>
                                     <TableCell>{row.email}</TableCell>
                                     <TableCell>{row.phoneNumber}</TableCell>
@@ -113,8 +114,32 @@ const DataTable = ({ refreshData, searchTerm }) => {
                                     <TableCell>{row.address}</TableCell>
                                     <TableCell>{row.companyName}</TableCell>
                                     <TableCell>{row.industryType}</TableCell>
-                                    <TableCell>{row.entryDate}</TableCell>
-                                    <TableCell>{row.enteredBy}</TableCell>
+                                    {/* Entry Date - Hidden until clicked */}
+                                    <TableCell>
+                                        {visibleRows[row.id] ? (
+                                            row.entryDate
+                                        ) : (
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleToggleVisibility(row.id)}
+                                            >
+                                                <InfoIcon/>
+                                            </IconButton>
+                                        )}
+                                    </TableCell>
+                                    {/* Entered By - Hidden until clicked */}
+                                    <TableCell>
+                                        {visibleRows[row.id] ? (
+                                            row.enteredBy
+                                        ) : (
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleToggleVisibility(row.id)}
+                                            >
+                                                <InfoIcon/>
+                                            </IconButton>
+                                        )}
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -123,7 +148,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
             </TableContainer>
             {filteredData.length > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "16px" }}>
-                    <button onClick={handlePrevPage} disabled={pageNo <= 1}>Previous</button>
+                    <button onClick={handlePrevPage} disabled={pageNo <= 0}>Previous</button>
                     <button onClick={handleNextPage}>Next</button>
                 </div>
             )}
