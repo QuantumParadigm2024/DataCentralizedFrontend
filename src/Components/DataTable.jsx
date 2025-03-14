@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
-    CircularProgress,Paper,Table,TableBody,TableCell,TableContainer,TableHead,TableRow,Typography,IconButton} from "@mui/material";
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import axiosInstance from "../utils/axiosInstance";
+    CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button
+} from "@mui/material";
 import InfoIcon from '@mui/icons-material/Info';
+import axiosInstance from "../utils/axiosInstance";
 
 const DataTable = ({ refreshData, searchTerm }) => {
     const [data, setData] = useState([]);
@@ -11,7 +11,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [pageNo, setPageNo] = useState(0);
-    const [visibleRows, setVisibleRows] = useState({});
+    const [selectedRow, setSelectedRow] = useState(null);
     const pageSize = 50;
 
     useEffect(() => {
@@ -66,12 +66,8 @@ const DataTable = ({ refreshData, searchTerm }) => {
         }
     };
 
-    const handleToggleVisibility = (id) => {
-        setVisibleRows((prev) => ({
-            ...prev,
-            [id]: !prev[id]
-        }));
-    };
+    const handleOpenPopup = (row) => setSelectedRow(row);
+    const handleClosePopup = () => setSelectedRow(null);
 
     const handleNextPage = () => fetchData(pageNo + 1);
     const handlePrevPage = () => fetchData(pageNo > 0 ? pageNo - 1 : 1);
@@ -93,52 +89,31 @@ const DataTable = ({ refreshData, searchTerm }) => {
                                 <TableCell>Name</TableCell>
                                 <TableCell>Email</TableCell>
                                 <TableCell>Phone Number</TableCell>
-                                <TableCell>Category</TableCell>
                                 <TableCell>Designation</TableCell>
                                 <TableCell>Address</TableCell>
                                 <TableCell>Company Name</TableCell>
                                 <TableCell>Industry Type</TableCell>
-                                <TableCell>Entry Date</TableCell>
-                                <TableCell>Entered By</TableCell>
+                                <TableCell>More Info</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {filteredData.map((row, index) => (
                                 <TableRow key={row.id} sx={{ '& td': { height: "30px" } }}>
                                     <TableCell>{index + 1 + pageNo * pageSize}</TableCell>
-                                    <TableCell>{row.name}</TableCell>
-                                    <TableCell>{row.email}</TableCell>
+                                    <TableCell>{row.name}</TableCell><TableCell>
+                                        <a href={`mailto:${row.email}`}>
+                                            {row.email}
+                                        </a>
+                                    </TableCell>
                                     <TableCell>{row.phoneNumber}</TableCell>
-                                    <TableCell>{row.category}</TableCell>
                                     <TableCell>{row.designation}</TableCell>
                                     <TableCell>{row.address}</TableCell>
                                     <TableCell>{row.companyName}</TableCell>
                                     <TableCell>{row.industryType}</TableCell>
-                                    {/* Entry Date - Hidden until clicked */}
                                     <TableCell>
-                                        {visibleRows[row.id] ? (
-                                            row.entryDate
-                                        ) : (
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleToggleVisibility(row.id)}
-                                            >
-                                                <InfoIcon/>
-                                            </IconButton>
-                                        )}
-                                    </TableCell>
-                                    {/* Entered By - Hidden until clicked */}
-                                    <TableCell>
-                                        {visibleRows[row.id] ? (
-                                            row.enteredBy
-                                        ) : (
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleToggleVisibility(row.id)}
-                                            >
-                                                <InfoIcon/>
-                                            </IconButton>
-                                        )}
+                                        <IconButton size="small" onClick={() => handleOpenPopup(row)}>
+                                            <InfoIcon />
+                                        </IconButton>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -152,6 +127,21 @@ const DataTable = ({ refreshData, searchTerm }) => {
                     <button onClick={handleNextPage}>Next</button>
                 </div>
             )}
+            <Dialog open={Boolean(selectedRow)} onClose={handleClosePopup} sx={{justifyItems: "flex-end"}}>
+                <DialogTitle>More Information</DialogTitle>
+                <DialogContent>
+                    {selectedRow && (
+                        <div>
+                            <Typography><strong>Category:</strong> {selectedRow.category}</Typography>
+                            <Typography><strong>Entry Date:</strong> {selectedRow.entryDate}</Typography>
+                            <Typography><strong>Entered By:</strong> {selectedRow.enteredBy}</Typography>
+                        </div>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleClosePopup}>Close</Button>
+                </DialogActions>
+            </Dialog>
         </Paper>
     );
 };

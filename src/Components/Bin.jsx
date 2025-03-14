@@ -1,12 +1,12 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 
-const BackgroundDesign = () => {
+const Bin = () => {
   return (
     <Box sx={{
       height: '200px', // Adjust height as needed
-      background: 'linear-gradient(135deg,#ba343b 30%,rgb(252, 247, 245) 70%)',
-      clipPath: 'polygon(0 0, 100% 100%, 10% 0%, 0 100%)',
+      background: 'linear-gradient(135deg,#ba343b 30%,black 70%)',
+      clipPath: 'polygon(0 0, 0% 0, 100% 100%, 0 100%)',
       position: 'relative',
     }}>
       <Typography
@@ -24,4 +24,4 @@ const BackgroundDesign = () => {
   );
 };
 
-export default BackgroundDesign;
+export default Bin;
