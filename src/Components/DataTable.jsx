@@ -4,7 +4,7 @@ import {
     CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button
 } from "@mui/material";
 import InfoIcon from '@mui/icons-material/Info';
-import axiosInstance from "../utils/axiosInstance";
+import axiosInstance from "../Helper/AxiosInstance";
 
 const DataTable = ({ refreshData, searchTerm }) => {
     const [data, setData] = useState([]);
