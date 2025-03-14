@@ -1,180 +1,184 @@
-import React, { useState } from "react";
-import { 
-    Box, Typography, Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle, 
-    ListItemIcon, ListItemText, Grid, IconButton 
+import React, { useState, useEffect } from "react";
+import {
+    Box, Button, Dialog, DialogActions, DialogContent, DialogTitle,
+    FormControl, RadioGroup, FormControlLabel, Radio, Grid,
+    TextField
 } from "@mui/material";
-import { Add, Folder, ArrowBack, UploadFile, Delete } from "@mui/icons-material";
+import { Search, UploadFile } from "@mui/icons-material";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import axiosInstance from "../utils/axiosInstance";
+import DataTable from "./DataTable";
 
-const AllFiles = ({ searchTerm }) => {
-    const [open, setOpen] = useState(false);
-    const [folderName, setFolderName] = useState("");
-    const [folders, setFolders] = useState([]);
-    const [currentFolder, setCurrentFolder] = useState(null); 
-    const [files, setFiles] = useState({}); 
+const AllFiles = () => {
+    const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
+    const [openTeamDialog, setOpenTeamDialog] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState("");
+    const [team, setTeam] = useState("");
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [refreshData, setRefreshData] = useState(false);
+    const [dataFetched, setDataFetched] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
 
-    
-    const handleOpen = () => setOpen(true);
-    const handleClose = () => {
-        setOpen(false);
-        setFolderName(""); 
+    const handleOpenCategoryDialog = (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+        setSelectedFiles(files);
+        setOpenCategoryDialog(true);
     };
 
-    // Handle Folder Creation
-    const handleCreateFolder = () => {
-        if (folderName.trim()) {
-            setFolders([...folders, folderName]);
-            setFiles({ ...files, [folderName]: [] }); // Initialize empty file list for folder
-            handleClose();
-        } else {
-            alert("Please enter a folder name!");
+    const handleCloseCategoryDialog = () => {
+        setOpenCategoryDialog(false);
+        setSelectedCategory("");
+    };
+
+    const handleCloseTeamDialog = () => {
+        setOpenTeamDialog(false);
+        setTeam("");
+        setSelectedFiles([]);
+    };
+
+    const handleProceedToTeamDialog = () => {
+        if (!selectedCategory) {
+            toast.error("Please select a category before proceeding.");
+            return;
         }
+        setOpenCategoryDialog(false);
+        setOpenTeamDialog(true);
     };
 
-    // Handle file uploads inside a folder
-    const handleFileUpload = (event) => {
-        const uploadedFiles = Array.from(event.target.files);
-        if (currentFolder) {
-            setFiles({
-                ...files,
-                [currentFolder]: [...(files[currentFolder] || []), ...uploadedFiles],
+    const handleDataFetched = () => {
+        setRefreshData((prev) => !prev);
+        setDataFetched(true);
+    }
+    const handleUpload = async () => {
+        if (!team) {
+            toast.error("Please select a team before uploading.");
+            return;
+        }
+
+        const formData = new FormData();
+        selectedFiles.forEach((file) => formData.append("file", file));
+        formData.append("category", selectedCategory);
+        formData.append("enteredBy", team);
+
+        try {
+            await axiosInstance.post("/planotech-inhouse/importCustomers", formData, {
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "multipart/form-data",
+                },
             });
+
+            toast.success("Files uploaded successfully!");
+            handleCloseTeamDialog();
+        } catch (error) {
+            console.error("Upload failed:", error);
+            toast.error("File upload failed. Please try again.");
         }
     };
-
-    // Open selected folder
-    const handleOpenFolder = (folder) => setCurrentFolder(folder);
-
-    // Go back to folder list
-    const handleGoBack = () => setCurrentFolder(null);
-
-    // Delete a file from a folder
-    const handleDeleteFile = (fileIndex) => {
-        setFiles({
-            ...files,
-            [currentFolder]: files[currentFolder].filter((_, index) => index !== fileIndex),
-        });
-    };
-
-    // Delete a folder and its contents
-    const handleDeleteFolder = (folder) => {
-        setFolders(folders.filter(f => f !== folder));
-        const updatedFiles = { ...files };
-        delete updatedFiles[folder];
-        setFiles(updatedFiles);
-    };
-
-    // Filter folders based on search term
-    const filteredFolders = folders.filter(folder =>
-        folder.toLowerCase().includes(searchTerm.toLowerCase())
-    );
 
     return (
-        <Box sx={{ width: "100%", p: 2 }}>
-            <Grid container justifyContent="space-between" alignItems="center" sx={{ mb: 2}}>
-                {currentFolder ? (
-                    <>
-                        <IconButton onClick={handleGoBack}><ArrowBack /></IconButton>
-                        <Typography variant="h5" sx={{ fontWeight: "bold", fontSize: '18px' }}>{currentFolder}</Typography>
-                        <input
-                            type="file"
-                            multiple
-                            onChange={handleFileUpload}
-                            style={{ display: "none" }}
-                            id="file-upload"
+        <Box sx={{ width: "100%", p: 1, overflow: "hidden" }}>
+            <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
+
+            <Box
+                sx={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 100,
+                    background: "#fff",
+                    p: 2,
+                    boxShadow: "0px 2px 5px rgba(0,0,0,0.1)",
+                    borderRadius: "8px",
+                }}
+            >
+                <Grid container alignItems="center" justifyContent="space-between">
+                    <Grid item xs={10} sm={8} md={6}>
+                        <TextField
+                            variant="outlined"
+                            size="small"
+                            placeholder="Search files and folders"
+                            fullWidth
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            InputProps={{
+                                startAdornment: (<Search sx={{ color: "gray", mr: 1 }} />),
+                                sx: { borderRadius: 5 }
+                            }}
                         />
+                    </Grid>
+
+                    <Box>
                         <label htmlFor="file-upload">
                             <Button variant="contained" component="span" startIcon={<UploadFile />}>
                                 Upload Files
                             </Button>
                         </label>
-                    </>
-                ) : (
-                    <>
-                        <Typography variant="h5" sx={{ fontWeight: "bold", fontSize: '18px' }}>All Files</Typography>
-                        <Button variant="contained" startIcon={<Add />} onClick={handleOpen}>New Folder</Button>
-                    </>
-                )}
-            </Grid>
+                    </Box>
+                </Grid>
+            </Box>
 
-            {/* Dialog for Folder Creation */}
-            <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-                <DialogTitle>Create New Folder</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="Folder Name"
-                        type="text"
-                        fullWidth
-                        variant="outlined"
-                        value={folderName}
-                        onChange={(e) => setFolderName(e.target.value)}
+            <Box sx={{ mt: 2 }}>
+                <Grid container justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                    <input
+                        type="file"
+                        name="file"
+                        multiple
+                        onChange={handleOpenCategoryDialog}
+                        style={{ display: "none" }}
+                        id="file-upload"
                     />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose} color="secondary">Cancel</Button>
-                    <Button onClick={handleCreateFolder} variant="contained">Create</Button>
-                </DialogActions>
-            </Dialog>
+                </Grid>
 
-            {/* Show Files inside the selected folder */}
-            {currentFolder ? (
-                <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6">Uploaded Files</Typography>
-                    {files[currentFolder]?.length === 0 ? (
-                        <Typography sx={{ color: "gray", mt: 1 }}>No files uploaded.</Typography>
-                    ) : (
-                        <Grid container spacing={2} sx={{ mt: 1 }}>
-                            {files[currentFolder].map((file, index) => (
-                                <Grid item xs={12} key={index}>
-                                    <Box sx={{ p: 1, bgcolor: "#f5f5f5", borderRadius: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        {file.name}
-                                        <IconButton onClick={() => handleDeleteFile(index)} color="error">
-                                            <Delete />
-                                        </IconButton>
-                                    </Box>
-                                </Grid>
-                            ))}
-                        </Grid>
-                    )}
-                </Box>
-            ) : (
-                /* List of Created Folders */
-                <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6">Folders</Typography>
-                    {filteredFolders.length === 0 ? (
-                        <Typography sx={{ color: "gray", mt: 1 }}>No matching folders found.</Typography>
-                    ) : (
-                        <Grid container spacing={2} sx={{ mt: 1 }}>
-                            {filteredFolders.map((folder, index) => (
-                                <Grid item xs={12} sm={6} md={4} key={index}>
-                                    <Box
-                                        sx={{
-                                            p: 2,
-                                            bgcolor: "white",
-                                            borderRadius: 2,
-                                            boxShadow: 3,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "space-between",
-                                            cursor: "pointer",
-                                            "&:hover": { boxShadow: 6 }
-                                        }}
-                                    >
-                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }} onClick={() => handleOpenFolder(folder)}>
-                                            <ListItemIcon><Folder color="primary" /></ListItemIcon>
-                                            <ListItemText primary={folder} />
-                                        </Box>
-                                        <IconButton onClick={() => handleDeleteFolder(folder)} color="error">
-                                            <Delete />
-                                        </IconButton>
-                                    </Box>
-                                </Grid>
-                            ))}
-                        </Grid>
-                    )}
-                </Box>
-            )}
+                {!dataFetched && (
+                    <Button variant="contained" color="primary" onClick={handleDataFetched}>
+                        Get All Files Data
+                    </Button>
+                )}
+
+                <Dialog open={openCategoryDialog} onClose={handleCloseCategoryDialog} fullWidth maxWidth="sm">
+                    <DialogTitle>Select Category</DialogTitle>
+                    <DialogContent>
+                        <FormControl component="fieldset">
+                            <RadioGroup value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                                {["Event Clients", "Venders", "Corporate", "Executive Data", "Pharma", "Customer", "Other"].map((category) => (
+                                    <FormControlLabel key={category} value={category} control={<Radio />} label={category} />
+                                ))}
+                            </RadioGroup>
+                        </FormControl>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCloseCategoryDialog} color="secondary">Cancel</Button>
+                        <Button onClick={handleProceedToTeamDialog} variant="contained" disabled={!selectedCategory}>
+                            Next
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Dialog open={openTeamDialog} onClose={handleCloseTeamDialog} fullWidth maxWidth="sm">
+                    <DialogTitle>Select Team</DialogTitle>
+                    <DialogContent>
+                        <FormControl component="fieldset">
+                            <RadioGroup value={team} onChange={(e) => setTeam(e.target.value)}>
+                                {["IT team", "Design team", "Marketing team", "Audio Fusion", "Other"].map((enteredBy) => (
+                                    <FormControlLabel key={enteredBy} value={enteredBy} control={<Radio />} label={enteredBy} />
+                                ))}
+                            </RadioGroup>
+                        </FormControl>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCloseTeamDialog} color="secondary">Cancel</Button>
+                        <Button onClick={handleUpload} variant="contained" disabled={!team}>
+                            Upload
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            </Box>
+
+            <Box sx={{ mt: 2 }}>
+                <DataTable refreshData={refreshData} searchTerm={searchTerm} />
+            </Box>
         </Box>
     );
 };
