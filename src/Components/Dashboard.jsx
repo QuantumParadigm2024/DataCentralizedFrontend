@@ -4,11 +4,11 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import SideBar from "./SideBar";
-import Bin from "./Bin";
-import Recent from "./Recent";
-import AllFiles from "./AllFiles";
-import Collections from "./Collections";
-import Favourites from "./Favourites";
+import Bin from "../SideBarComponents/Bin";
+import Recent from "../SideBarComponents/Recent";
+import AllFiles from "../SideBarComponents/AllFiles";
+import Collections from "../SideBarComponents/Collections";
+import Favourites from "../SideBarComponents/Favourites";
 
 const Dashboard = () => {
     const [selectedContent, setSelectedContent] = useState("allFiles");
