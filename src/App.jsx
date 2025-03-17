@@ -2,11 +2,9 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Dashboard from './Components/Dashboard'
-import Recent from './SideBarComponents/Recent'
-import Bin from './SideBarComponents/Bin'
-import Collections from './SideBarComponents/Collections'
 import './global.css'
 import DataTable from './Components/DataTable'
+import Bin from './SideBarComponents/Bin'
 
 const App = () => {
     return (
@@ -14,6 +12,7 @@ const App = () => {
             <Routes>
                 <Route path='/' element={<Dashboard />} />
                 <Route path='/dataTable' element={<DataTable/>} />
+                <Route path='bin' element={<Bin />} />
             </Routes>
         </BrowserRouter>
     )

@@ -9,6 +9,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axiosInstance from "../Helper/AxiosInstance";
 import DataTable from "../Components/DataTable";
+import Bin from "./Bin";
 
 const AllFiles = () => {
     const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
@@ -79,8 +80,11 @@ const AllFiles = () => {
     };
 
     return (
-        <Box sx={{ width: "100%", p: 1, overflow: "hidden" }}>
+        <Box sx={{ width: "100%", overflow: "hidden" }}>
             <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
+            <Box >
+                <Bin />
+            </Box>
 
             <Box
                 sx={{
@@ -176,7 +180,7 @@ const AllFiles = () => {
                 </Dialog>
             </Box>
 
-            <Box sx={{ mt: 2 }}>
+            <Box sx={{ mt: 2}}>
                 <DataTable refreshData={refreshData} searchTerm={searchTerm} />
             </Box>
         </Box>

@@ -1,7 +1,6 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import {
-    CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button
+    CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Popover
 } from "@mui/material";
 import InfoIcon from '@mui/icons-material/Info';
 import axiosInstance from "../Helper/AxiosInstance";
@@ -12,6 +11,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [pageNo, setPageNo] = useState(0);
+    const [anchorEl, setAnchorEl] = useState(null);
     const [selectedRow, setSelectedRow] = useState(null);
     const pageSize = 50;
 
@@ -67,25 +67,34 @@ const DataTable = ({ refreshData, searchTerm }) => {
         }
     };
 
-    const handleOpenPopup = (row) => setSelectedRow(row);
-    const handleClosePopup = () => setSelectedRow(null);
+    const handlePopoverOpen = (event, row) => {
+        setAnchorEl(event.currentTarget);
+        setSelectedRow(row);
+    };
+
+    const handlePopoverClose = () => {
+        setAnchorEl(null);
+        setSelectedRow(null);
+    };
+
+    const open = Boolean(anchorEl);
 
     const handleNextPage = () => fetchData(pageNo + 1);
     const handlePrevPage = () => fetchData(pageNo > 0 ? pageNo - 1 : 1);
 
     return (
-        <Paper sx={{ width: "100%", overflow: "hidden", borderRadius: "8px", boxShadow: 3 }}>
-            <TableContainer sx={{ maxHeight: "70vh", overflowX: "auto" }}>
+        <Paper sx={{ width: "100%", margin: "auto", overflow: "hidden", borderRadius: "8px", boxShadow: 3 }}>
+            <TableContainer sx={{ maxHeight: "60vh", overflowX: "auto" }}>
                 {loading ? (
                     <CircularProgress sx={{ display: "block", margin: "20px auto" }} />
                 ) : error ? (
-                    <Typography color="error" sx={{ padding: 2 }}>{error}</Typography>
+                    <Typography color="error" sx={{ padding: 2, fontSize: "0.9rem" }}>{error}</Typography>
                 ) : filteredData.length === 0 ? (
-                    <Typography sx={{ padding: 2 }}>No data available</Typography>
+                    <Typography sx={{ padding: 1, fontSize: "0.9rem" }}>No data available</Typography>
                 ) : (
-                    <Table stickyHeader>
+                    <Table stickyHeader size="small">
                         <TableHead>
-                            <TableRow sx={{ '& th': { backgroundColor: "#eaf1f0", fontWeight: "bold", height: "40px" } }}>
+                            <TableRow sx={{ '& th': { backgroundColor: "#eaf1f0", fontWeight: "bold", height: "35px", fontSize: "0.8rem" } }}>
                                 <TableCell>SL NO</TableCell>
                                 <TableCell>Name</TableCell>
                                 <TableCell>Email</TableCell>
@@ -99,21 +108,21 @@ const DataTable = ({ refreshData, searchTerm }) => {
                         </TableHead>
                         <TableBody>
                             {filteredData.map((row, index) => (
-                                <TableRow key={row.id} sx={{ '& td': { height: "30px" } }}>
+                                <TableRow key={row.id} sx={{ '& td': { height: "30px", fontSize: "0.8rem" } }}>
                                     <TableCell>{index + 1 + pageNo * pageSize}</TableCell>
-                                    <TableCell>{row.name}</TableCell><TableCell>
-                                        <a href={`mailto:${row.email}`}>
-                                            {row.email}
-                                        </a>
-                                    </TableCell>
+                                    <TableCell>{row.name}</TableCell>
+                                    <TableCell>{row.email}</TableCell>
                                     <TableCell>{row.phoneNumber}</TableCell>
                                     <TableCell>{row.designation}</TableCell>
                                     <TableCell>{row.address}</TableCell>
                                     <TableCell>{row.companyName}</TableCell>
                                     <TableCell>{row.industryType}</TableCell>
                                     <TableCell>
-                                        <IconButton size="small" onClick={() => handleOpenPopup(row)}>
-                                            <InfoIcon />
+                                        <IconButton
+                                            size="small"
+                                            onMouseEnter={(e) => handlePopoverOpen(e, row)}
+                                        >
+                                            <InfoIcon fontSize="small" />
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
@@ -128,21 +137,22 @@ const DataTable = ({ refreshData, searchTerm }) => {
                     <button onClick={handleNextPage}>Next</button>
                 </div>
             )}
-            <Dialog open={Boolean(selectedRow)} onClose={handleClosePopup} sx={{justifyItems: "flex-end"}}>
-                <DialogTitle>More Information</DialogTitle>
-                <DialogContent>
-                    {selectedRow && (
-                        <div>
-                            <Typography><strong>Category:</strong> {selectedRow.category}</Typography>
-                            <Typography><strong>Entry Date:</strong> {selectedRow.entryDate}</Typography>
-                            <Typography><strong>Entered By:</strong> {selectedRow.enteredBy}</Typography>
-                        </div>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClosePopup}>Close</Button>
-                </DialogActions>
-            </Dialog>
+            <Popover
+                open={open}
+                anchorEl={anchorEl}
+                onClose={handlePopoverClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+                disableRestoreFocus
+            >
+                {selectedRow && (
+                    <div style={{ padding: "16px", fontSize: "0.8rem" }} onMouseEnter={() => setAnchorEl(anchorEl)} onMouseLeave={handlePopoverClose}>
+                        <p><strong>Category:</strong> {selectedRow.category}</p>
+                        <p>Entry Date: {selectedRow.entryDate}</p>
+                        <p>Entered By: {selectedRow.enteredBy}</p>
+                    </div>
+                )}
+            </Popover>
         </Paper>
     );
 };
