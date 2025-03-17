@@ -25,7 +25,7 @@ const Bin = () => {
           left: 0,
         }}
       />
-      <Typography sx={{ml: "190px" , fontSize: "2rem" }}>Quantum Center</Typography>
+      <Typography sx={{ml: "190px" , fontSize: "35px" }}>Quantum Center</Typography>
     </Box>
   );
 };

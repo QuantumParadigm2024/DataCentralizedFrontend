@@ -14,6 +14,17 @@ const DataTable = ({ refreshData, searchTerm }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedRow, setSelectedRow] = useState(null);
     const pageSize = 50;
+    const [expandedRows, setExpandedRows] = useState({});
+
+    const handleRowClick = (rowId) => {
+        setExpandedRows((prev) => ({ ...prev, [rowId]: !prev[rowId] }));
+    };
+
+    const truncateText = (text, isExpanded) => {
+        if (isExpanded || !text) return text;
+        const words = text.split(' ');
+        return words.length > 2 ? words.slice(0, 2).join(' ') + '...' : text;
+    };
 
     useEffect(() => {
         if (refreshData) {
@@ -88,11 +99,11 @@ const DataTable = ({ refreshData, searchTerm }) => {
                 {loading ? (
                     <CircularProgress sx={{ display: "block", margin: "20px auto" }} />
                 ) : error ? (
-                    <Typography color="error" sx={{ padding: 2, fontSize: "0.9rem" }}>{error}</Typography>
+                    <Typography color="error" sx={{ padding: 1, fontSize: "0.9rem" }}>{error}</Typography>
                 ) : filteredData.length === 0 ? (
                     <Typography sx={{ padding: 1, fontSize: "0.9rem" }}>No data available</Typography>
                 ) : (
-                    <Table stickyHeader size="small">
+                    <Table size="small">
                         <TableHead>
                             <TableRow sx={{ '& th': { backgroundColor: "#eaf1f0", fontWeight: "bold", height: "35px", fontSize: "0.8rem" } }}>
                                 <TableCell>SL NO</TableCell>
@@ -111,11 +122,22 @@ const DataTable = ({ refreshData, searchTerm }) => {
                                 <TableRow key={row.id} sx={{ '& td': { height: "30px", fontSize: "0.8rem" } }}>
                                     <TableCell>{index + 1 + pageNo * pageSize}</TableCell>
                                     <TableCell>{row.name}</TableCell>
-                                    <TableCell>{row.email}</TableCell>
-                                    <TableCell>{row.phoneNumber}</TableCell>
-                                    <TableCell>{row.designation}</TableCell>
+                                    <TableCell>
+                                        <a href={`mailto:${row.email}`}>
+                                            {row.email}
+                                        </a>
+                                    </TableCell>
+                                    <TableCell>
+                                        {/^([6-9])\d{9}$/.test(row.phoneNumber) ? `+91${row.phoneNumber}` : row.phoneNumber}
+                                    </TableCell>
+
+                                    <TableCell onClick={() => handleRowClick(row.id)}>
+                                        {truncateText(row.designation, expandedRows[row.id])}
+                                    </TableCell>
                                     <TableCell>{row.address}</TableCell>
-                                    <TableCell>{row.companyName}</TableCell>
+                                    <TableCell onClick={() => handleRowClick(row.id)}>
+                                        {truncateText(row.companyName, expandedRows[row.id])}
+                                    </TableCell>
                                     <TableCell>{row.industryType}</TableCell>
                                     <TableCell>
                                         <IconButton

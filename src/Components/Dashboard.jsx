@@ -54,7 +54,7 @@ const Dashboard = () => {
                 item xs={12} md={9} lg={10}
                 sx={{
                     flexGrow: 1,
-                    p: 3,
+                    p: 0,
                     ml: { md: "250px", xs: "0" },
                     height: "100vh",
                     backgroundSize: "cover",
