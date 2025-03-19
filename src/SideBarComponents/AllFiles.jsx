@@ -91,8 +91,7 @@ const AllFiles = () => {
                     p: 2,
                     boxShadow: "0px 2px 5px rgba(0,0,0,0.1)",
                     borderRadius: "8px",
-                }}
-            >
+                }}>
                 <Grid container alignItems="center" justifyContent="space-between">
                     <Grid item xs={10} sm={8} md={6}>
                         <TextField

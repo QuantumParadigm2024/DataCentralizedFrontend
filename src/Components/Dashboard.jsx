@@ -9,6 +9,7 @@ import Recent from "../SideBarComponents/Recent";
 import AllFiles from "../SideBarComponents/AllFiles";
 import Collections from "../SideBarComponents/Collections";
 import Favourites from "../SideBarComponents/Favourites";
+import AllFolders from "../SideBarComponents/AllFolders";
 
 const Dashboard = () => {
     const [selectedContent, setSelectedContent] = useState("allFiles");
@@ -21,6 +22,8 @@ const Dashboard = () => {
         switch (selectedContent) {
             case "recent":
                 return <Recent />;
+            case "allFolders":
+                return <AllFolders />;
             case "bin":
                 return <Bin />;
             case "collections":
