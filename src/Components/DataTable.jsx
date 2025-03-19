@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import {
-    CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Popover
+    CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Popover, Button
 } from "@mui/material";
 import InfoIcon from '@mui/icons-material/Info';
 import axiosInstance from "../Helper/AxiosInstance";
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 
 const DataTable = ({ refreshData, searchTerm }) => {
     const [data, setData] = useState([]);
@@ -14,6 +16,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
     const [anchorEl, setAnchorEl] = useState(null);
     const [selectedRow, setSelectedRow] = useState(null);
     const pageSize = 50;
+    const [totalPages, setTotalPages] = useState(0);
     const [expandedRows, setExpandedRows] = useState({});
 
     const handleRowClick = (rowId) => {
@@ -69,6 +72,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
                 const fetchedData = arrayKey ? response.data[arrayKey] : [];
                 setData(fetchedData);
                 setFilteredData(fetchedData);
+                setTotalPages(response.data.totalPages || Math.ceil(fetchedData.length / pageSize));
             }
             setPageNo(newPageNo);
         } catch (err) {
@@ -90,8 +94,16 @@ const DataTable = ({ refreshData, searchTerm }) => {
 
     const open = Boolean(anchorEl);
 
-    const handleNextPage = () => fetchData(pageNo + 1);
-    const handlePrevPage = () => fetchData(pageNo > 0 ? pageNo - 1 : 1);
+    const handleNextPage = () => {
+        if (pageNo < totalPages - 1) fetchData(pageNo + 1);
+    };
+    const handlePrevPage = () => {
+        if (pageNo > 0) fetchData(pageNo - 1);
+    };
+
+    const handlePageClick = (page) => {
+        fetchData(page);
+    };
 
     return (
         <Paper sx={{ width: "100%", margin: "auto", overflow: "hidden", borderRadius: "8px", boxShadow: 3 }}>
@@ -123,14 +135,9 @@ const DataTable = ({ refreshData, searchTerm }) => {
                                     <TableCell>{index + 1 + pageNo * pageSize}</TableCell>
                                     <TableCell>{row.name}</TableCell>
                                     <TableCell>
-                                        <a href={`mailto:${row.email}`}>
-                                            {row.email}
-                                        </a>
+                                        <a href={`mailto:${row.email}`}>{row.email}</a>
                                     </TableCell>
-                                    <TableCell>
-                                        {/^([6-9])\d{9}$/.test(row.phoneNumber) ? `+91${row.phoneNumber}` : row.phoneNumber}
-                                    </TableCell>
-
+                                    <TableCell>{/^([6-9])\d{9}$/.test(row.phoneNumber) ? `+91${row.phoneNumber}` : row.phoneNumber}</TableCell>
                                     <TableCell onClick={() => handleRowClick(row.id)}>
                                         {truncateText(row.designation, expandedRows[row.id])}
                                     </TableCell>
@@ -140,10 +147,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
                                     </TableCell>
                                     <TableCell>{row.industryType}</TableCell>
                                     <TableCell>
-                                        <IconButton
-                                            size="small"
-                                            onMouseEnter={(e) => handlePopoverOpen(e, row)}
-                                        >
+                                        <IconButton size="small" onMouseEnter={(e) => handlePopoverOpen(e, row)}>
                                             <InfoIcon fontSize="small" />
                                         </IconButton>
                                     </TableCell>
@@ -154,9 +158,13 @@ const DataTable = ({ refreshData, searchTerm }) => {
                 )}
             </TableContainer>
             {filteredData.length > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "16px" }}>
-                    <button onClick={handlePrevPage} disabled={pageNo <= 0}>Previous</button>
-                    <button onClick={handleNextPage}>Next</button>
+
+                <div style={{ display: "flex", justifyContent: "center", padding: "10px" }}>
+                    <IconButton onClick={handlePrevPage} disabled={pageNo === 0}><ArrowBackIosIcon /></IconButton>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                        <Button key={i} onClick={() => handlePageClick(i)} disabled={i === pageNo}>{i + 1}</Button>
+                    ))}
+                    <IconButton onClick={handleNextPage} disabled={pageNo === totalPages - 1}><ArrowForwardIosIcon /></IconButton>
                 </div>
             )}
             <Popover
@@ -169,7 +177,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
             >
                 {selectedRow && (
                     <div style={{ padding: "16px", fontSize: "0.8rem" }} onMouseEnter={() => setAnchorEl(anchorEl)} onMouseLeave={handlePopoverClose}>
-                        <p><strong>Category:</strong> {selectedRow.category}</p>
+                        <p>Category: {selectedRow.category}</p>
                         <p>Entry Date: {selectedRow.entryDate}</p>
                         <p>Entered By: {selectedRow.enteredBy}</p>
                     </div>
