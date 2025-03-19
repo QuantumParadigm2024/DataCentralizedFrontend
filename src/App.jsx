@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Dashboard from './Components/Dashboard'
 import './global.css'
 import DataTable from './Components/DataTable'
+import Login from './Components/Login'
 import Bin from './SideBarComponents/Bin'
 
 const App = () => {
@@ -11,7 +12,8 @@ const App = () => {
         <BrowserRouter>
             <Routes>
                 <Route path='/' element={<Dashboard />} />
-                <Route path='/dataTable' element={<DataTable/>} />
+                {/* <Route path='/dashboard' element={<Dashboard />} /> */}
+                <Route path='/dataTable' element={<DataTable />} />
                 <Route path='bin' element={<Bin />} />
             </Routes>
         </BrowserRouter>

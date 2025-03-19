@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box,
   Button,
@@ -97,7 +97,7 @@ const AllFiles = () => {
   };
 
   return (
-    <Box sx={{ width: "100%", height: "100%",}}>
+    <Box sx={{ width: "100%", height: "100%", }}>
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
       <Box
         ref={headerRef}
