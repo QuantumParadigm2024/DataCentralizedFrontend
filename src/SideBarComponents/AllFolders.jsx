@@ -136,9 +136,6 @@ const AllFolders = () => {
             <Box>
                 <Box
                     sx={{
-                        position: "sticky",
-                        top: 0,
-                        zIndex: 100,
                         background: "#fff",
                         p: 2,
                         borderRadius: "8px",
