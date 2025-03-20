@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, IconButton, Input, ListItemIcon } from "@mui/material";
@@ -11,6 +12,8 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import InsertChartIcon from '@mui/icons-material/InsertChart';
+import CryptoJS from 'crypto-js';
+import { secretKey } from '../Helper/SecretKey';
 
 const AllFolders = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -21,13 +24,30 @@ const AllFolders = () => {
     const [openFolder, setOpenFolder] = useState(null);
     const [files, setFiles] = useState({});
 
+    const decryptToken = (encryptedToken) => {
+        try {
+            const bytes = CryptoJS.AES.decrypt(encryptedToken, secretKey);
+            return bytes.toString(CryptoJS.enc.Utf8);
+        } catch (error) {
+            console.error('Error decrypting token:', error);
+            return null;
+        }
+    };
+
+    const encryptedToken = sessionStorage.getItem("dc");
+    const token = decryptToken(encryptedToken);
+
     useEffect(() => {
         fetchFolders();
     }, []);
 
     const fetchFolders = async () => {
         try {
-            const response = await axiosInstance.get(`/planotech-inhouse/getFolders`);
+            const response = await axiosInstance.get(`/planotech-inhouse/getFolders`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
             setFolders(response.data.content || []);
         } catch (error) {
             console.error("Error fetching folders:", error);
@@ -47,7 +67,11 @@ const AllFolders = () => {
             return;
         }
         try {
-            await axiosInstance.post(`/planotech-inhouse/create/folder/${folderName}`);
+            await axiosInstance.post(`/planotech-inhouse/create/folder/${folderName}`, {}, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
             toast.success("Folder created successfully");
             setFolderName("");
             handleClose();
@@ -58,11 +82,34 @@ const AllFolders = () => {
         }
     };
 
-    const handleFolderClick = (folderId) => {
-        setOpenFolder(folderId);
+    const handleFolderClick = (entityId) => {
+        setOpenFolder(entityId);
     };
 
-    const handleFileUpload = async (event, folderId) => {
+    const fetchFiles = async (entityId) => {
+        try {
+            const response = await axiosInstance.get(`/planotech-inhouse/getFiles?folderId=${entityId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            setFiles(prevFiles => ({
+                ...prevFiles,
+                [entityId]: response.data.files
+            }));
+        } catch (error) {
+            console.error("Error fetching files:", error);
+            toast.error(error.response?.data?.message || "Error fetching files");
+        }
+    };
+
+    useEffect(() => {
+        if (openFolder) {
+            fetchFiles(openFolder);
+        }
+    }, [openFolder]);
+
+    const handleFileUpload = async (event, entityId) => {
         const files = event.target.files[0];
         if (!files) return;
 
@@ -72,9 +119,10 @@ const AllFolders = () => {
         const toastId = toast.loading("Uploading file...");
 
         try {
-            const response = await axiosInstance.post(`/planotech-inhouse/uploadFile?folderId=${folderId}`, formData, {
+            const response = await axiosInstance.post(`/planotech-inhouse/uploadFile?folderId=${entityId}`, formData, {
                 headers: {
                     "Content-Type": "multipart/form-data",
+                    Authorization: `Bearer ${token}`,
                 },
             });
 
@@ -86,7 +134,7 @@ const AllFolders = () => {
                 autoClose: 3000,
             });
 
-            fetchFiles(folderId);
+            fetchFiles(entityId);
         } catch (error) {
             console.error("Error uploading file:", error);
             toast.update(toastId, {
@@ -97,25 +145,6 @@ const AllFolders = () => {
             });
         }
     };
-
-    const fetchFiles = async (folderId) => {
-        try {
-            const response = await axiosInstance.get(`/planotech-inhouse/getFiles?folderId=${folderId}`);
-            setFiles(prevFiles => ({
-                ...prevFiles,
-                [folderId]: response.data.files
-            }));
-        } catch (error) {
-            console.error("Error fetching files:", error);
-            toast.error("Error fetching files");
-        }
-    };
-
-    useEffect(() => {
-        if (openFolder) {
-            fetchFiles(openFolder);
-        }
-    }, [openFolder]);
 
     const getFileIcon = (fileName) => {
         if (fileName.endsWith('.pdf')) {
@@ -172,7 +201,7 @@ const AllFolders = () => {
                     <Box sx={{ mt: 2 }}>
                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                             <Typography variant="h6">
-                                {folders.find(f => f[0] === openFolder)?.[1]}
+                                {folders.find(f => f.entityId === openFolder)?.folderName || "Folder"}
                             </Typography>
                             <Box>
                                 <Button
@@ -318,9 +347,9 @@ const AllFolders = () => {
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
                                 </Box>
                                 <List>
-                                    {folders.map((folder, dateModified) => (
+                                    {folders.map((folder) => (
                                         <ListItem
-                                            key={folder[0]}
+                                            key={folder.entityId}
                                             sx={{
                                                 display: 'grid',
                                                 gridTemplateColumns: '2fr 1fr 1fr',
@@ -330,49 +359,55 @@ const AllFolders = () => {
                                                 borderRadius: '8px',
                                                 cursor: 'pointer'
                                             }}
-                                            onClick={() => handleFolderClick(folder[0])}
+                                            onClick={() => handleFolderClick(folder.entityId)}
                                         >
                                             <Box sx={{ display: "flex", alignItems: "center" }}>
                                                 <FolderIcon sx={{ color: "#f8d775", mr: 1 }} />
-                                                <ListItemText
-                                                    primary={folder[1]}
-                                                    primaryTypographyProps={{
-                                                        sx: { color: "#555555", fontSize: "14px", fontWeight: "bold" }
-                                                    }}
-                                                />
+                                                <Typography
+                                                    variant="body1"
+                                                    sx={{ color: "#555555", fontSize: "14px", fontWeight: "bold" }}
+                                                >
+                                                    {folder.folderName}
+                                                </Typography>
                                             </Box>
+                                            <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
+                                                {new Date(folder.time).toLocaleString()}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
+                                                {folder.createdBy ? folder.createdBy : "N/A"}
+                                            </Typography>
                                         </ListItem>
                                     ))}
                                 </List>
                             </Box>
                         ) : (
-                        <Grid container spacing={2} sx={{ mt: 2 }}>
-                            {folders.map((folder) => (
-                                <Grid item key={folder[0]} xs={6} sm={4} md={3} lg={2}>
-                                    <Card
-                                        sx={{
-                                            display: "flex",
-                                            flexDirection: "column",
-                                            alignItems: "center",
-                                            cursor: "pointer",
-                                            boxShadow: "0px 2px 5px rgba(0,0,0,0.2)",
-                                        }}
-                                        onClick={() => handleFolderClick(folder[0])}
-                                    >
-                                        <FolderIcon sx={{ fontSize: 80, color: "#f8d775", mt: 2 }} />
-                                        <CardContent sx={{ textAlign: "center" }}>
-                                            <Typography
-                                                variant="body2"
-                                                noWrap
-                                                sx={{ width: "100px", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 'bold', color: '#555555' }}
-                                            >
-                                                {folder[1]}
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            ))}
-                        </Grid>
+                            <Grid container spacing={2} sx={{ mt: 2 }}>
+                                {folders.map((folder) => (
+                                    <Grid item key={folder[0]} xs={6} sm={4} md={3} lg={2}>
+                                        <Card
+                                            sx={{
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                alignItems: "center",
+                                                cursor: "pointer",
+                                                boxShadow: "0px 2px 5px rgba(0,0,0,0.2)",
+                                            }}
+                                            onClick={() => handleFolderClick(folder[0])}
+                                        >
+                                            <FolderIcon sx={{ fontSize: 80, color: "#f8d775", mt: 2 }} />
+                                            <CardContent sx={{ textAlign: "center" }}>
+                                                <Typography
+                                                    variant="body2"
+                                                    noWrap
+                                                    sx={{ width: "100px", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 'bold', color: '#555555' }}
+                                                >
+                                                    {folder[1]}
+                                                </Typography>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                ))}
+                            </Grid>
                         )}
                     </Box>
                 )}
