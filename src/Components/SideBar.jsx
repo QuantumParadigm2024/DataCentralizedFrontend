@@ -72,7 +72,7 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
 
         <Divider sx={{ width: "100%", my: 1 }} />
 
-        <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: drawerOpen ? "flex-start" : "center" }}>
+        <Box sx={{ p: 1, display: "flex", alignItems: "center", justifyContent: drawerOpen ? "flex-start" : "center", ml: 0 }}>
           <IconButton>
             <AccountCircleIcon sx={{ fontSize: 28 }} />
           </IconButton>

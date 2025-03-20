@@ -6,6 +6,8 @@ import InfoIcon from '@mui/icons-material/Info';
 import axiosInstance from "../Helper/AxiosInstance";
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
+import CryptoJS from 'crypto-js';
+import { secretKey } from '../Helper/SecretKey';
 
 const DataTable = ({ refreshData, searchTerm }) => {
     const [data, setData] = useState([]);
@@ -18,6 +20,19 @@ const DataTable = ({ refreshData, searchTerm }) => {
     const pageSize = 50;
     const [totalPages, setTotalPages] = useState(0);
     const [expandedRows, setExpandedRows] = useState({});
+
+    const decryptToken = (encryptedToken) => {
+        try {
+            const bytes = CryptoJS.AES.decrypt(encryptedToken, secretKey);
+            return bytes.toString(CryptoJS.enc.Utf8);
+        } catch (error) {
+            console.error('Error decrypting token:', error);
+            return null;
+        }
+    };
+
+    const encryptedToken = sessionStorage.getItem("dc");
+    const token = decryptToken(encryptedToken);
 
     const handleRowClick = (rowId) => {
         setExpandedRows((prev) => ({ ...prev, [rowId]: !prev[rowId] }));
@@ -60,8 +75,12 @@ const DataTable = ({ refreshData, searchTerm }) => {
                 params: {
                     pageNo: newPageNo,
                     pageSize: pageSize
+                },
+                headers: {
+                    Authorization: `Bearer ${token}`
                 }
             });
+            
 
             console.log("API Response:", response.data);
             if (Array.isArray(response.data)) {

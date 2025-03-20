@@ -18,6 +18,9 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axiosInstance from "../Helper/AxiosInstance";
 import DataTable from "../Components/DataTable";
+import CryptoJS from 'crypto-js';
+import { secretKey } from '../Helper/SecretKey';
+
 
 const AllFiles = () => {
   const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
@@ -29,6 +32,19 @@ const AllFiles = () => {
   const [dataFetched, setDataFetched] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const headerRef = useRef(null);
+
+  const decryptToken = (encryptedToken) => {
+    try {
+      const bytes = CryptoJS.AES.decrypt(encryptedToken, secretKey);
+      return bytes.toString(CryptoJS.enc.Utf8);
+    } catch (error) {
+      console.error('Error decrypting token:', error);
+      return null;
+    }
+  };
+
+  const encryptedToken = sessionStorage.getItem("dc");
+  const token = decryptToken(encryptedToken);
 
   const handleOpenCategoryDialog = (event) => {
     const files = Array.from(event.target.files);
@@ -78,6 +94,7 @@ const AllFiles = () => {
         headers: {
           Accept: "application/json",
           "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`
         },
       });
 
@@ -91,7 +108,7 @@ const AllFiles = () => {
 
   const calculateDataTableHeight = () => {
     if (headerRef.current) {
-      return `calc(100% - ${headerRef.current.offsetHeight + 16}px)`; // 16px is approx. for top margin of datatable
+      return `calc(100% - ${headerRef.current.offsetHeight + 16}px)`;
     }
     return '100%';
   };
