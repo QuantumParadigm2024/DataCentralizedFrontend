@@ -91,7 +91,7 @@ const AllFiles = () => {
 
   const calculateDataTableHeight = () => {
     if (headerRef.current) {
-      return `calc(100% - ${headerRef.current.offsetHeight + 16}px)`; // 16px is approx. for top margin of datatable
+      return `calc(100% - ${headerRef.current.offsetHeight + 16}px)`;
     }
     return '100%';
   };
