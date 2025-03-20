@@ -86,7 +86,7 @@ const AllFiles = () => {
     const formData = new FormData();
     selectedFiles.forEach((file) => formData.append("file", file));
     formData.append("category", selectedCategory);
-    formData.append("enteredBy", team);
+    formData.append("enteredBy", team); 
 
     try {
       await axiosInstance.post("/planotech-inhouse/importCustomers", formData, {
