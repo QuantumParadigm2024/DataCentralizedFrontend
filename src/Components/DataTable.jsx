@@ -80,7 +80,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
                     Authorization: `Bearer ${token}`
                 }
             });
-            
+
 
             console.log("API Response:", response.data);
             if (Array.isArray(response.data)) {
@@ -123,6 +123,16 @@ const DataTable = ({ refreshData, searchTerm }) => {
     const handlePageClick = (page) => {
         fetchData(page);
     };
+  
+    const handleEmailClick = (email) => {
+        try {
+            window.location.href = `mailto:${email}`;
+        } catch (error) {
+            console.error("Error opening mailto link:", error);
+            // Optionally, provide a fallback or user feedback.
+            alert("Could not open email client. Please check your email settings.");
+        }
+    };
 
     return (
         <Paper sx={{ width: "100%", margin: "auto", overflow: "hidden", borderRadius: "8px", boxShadow: 3 }}>
@@ -154,8 +164,18 @@ const DataTable = ({ refreshData, searchTerm }) => {
                                     <TableCell>{index + 1 + pageNo * pageSize}</TableCell>
                                     <TableCell>{row.name}</TableCell>
                                     <TableCell>
-                                        <a href={`mailto:${row.email}`}>{row.email}</a>
-                                    </TableCell>
+                                <Typography
+                                    component="span"
+                                    sx={{   
+                                        color: 'primary.main',
+                                        cursor: 'pointer',
+                                        textDecoration: 'underline',
+                                    }}
+                                    onClick={() => handleEmailClick(row.email)}
+                                >
+                                    {row.email}
+                                </Typography>
+                            </TableCell>
                                     <TableCell>{/^([6-9])\d{9}$/.test(row.phoneNumber) ? `+91${row.phoneNumber}` : row.phoneNumber}</TableCell>
                                     <TableCell onClick={() => handleRowClick(row.id)}>
                                         {truncateText(row.designation, expandedRows[row.id])}

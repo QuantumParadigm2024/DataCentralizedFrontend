@@ -123,13 +123,11 @@ const Dashboard = () => {
                     onClose={() => setMobileOpen(false)}
                     sx={{ display: { md: "none" } }}
                 >
-                    <Box sx={{ width: 250, bgcolor: "lightgoldenrodyellow", height: "100%" }}>
-                        <SideBar
-                            setSelectedContent={setSelectedContent}
-                            drawerOpen={drawerOpen}
-                            setDrawerOpen={setDrawerOpen}
-                        />
-                    </Box>
+                    <SideBar
+                        setSelectedContent={setSelectedContent}
+                        drawerOpen={drawerOpen}
+                        setDrawerOpen={setDrawerOpen}
+                    />
                 </Drawer>
 
                 <Grid
