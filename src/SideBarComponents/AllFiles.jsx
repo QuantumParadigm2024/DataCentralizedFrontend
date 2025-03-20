@@ -21,7 +21,6 @@ import DataTable from "../Components/DataTable";
 import CryptoJS from 'crypto-js';
 import { secretKey } from '../Helper/SecretKey';
 
-
 const AllFiles = () => {
   const [openCategoryDialog, setOpenCategoryDialog] = useState(false);
   const [openTeamDialog, setOpenTeamDialog] = useState(false);
