@@ -12,7 +12,9 @@ import axiosInstance from "../Helper/AxiosInstance";
 import IconButton from "@mui/joy/IconButton";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import Data from "../Assets/data.jpeg"
+import Data from "../Assets/data.jpeg";
+import CryptoJS from 'crypto-js';
+import { secretKey } from '../Helper/SecretKey';
 
 const Login = () => {
     const [formData, setFormData] = useState({ email: "", password: "" });
@@ -39,16 +41,23 @@ const Login = () => {
 
         setErrors(newErrors);
 
+        const params = {
+            email: formData.email,
+            password: formData.password,
+        };
+
         if (Object.keys(newErrors).length === 0) {
             setLoading(true);
             try {
-                const response = await axiosInstance.get("/api/user/login", {
-                    params: { email: formData.email, password: formData.password },
-                    headers: { "Content-Type": "application/json" },
+                const response = await axiosInstance.post("/planotech-inhouse/user/login", formData, {
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    params: params,
                 });
-
                 if (response.status === 200) {
-                    sessionStorage.setItem("token", response.data.data);
+                    const encryptedToken = CryptoJS.AES.encrypt(response.data.token, secretKey).toString();
+                    sessionStorage.setItem("dc", encryptedToken);
                     toast.success("Login Successful!");
                     navigate("/dashboard");
                 }

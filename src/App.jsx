@@ -11,8 +11,8 @@ const App = () => {
     return (
         <BrowserRouter>
             <Routes>
-                {/* <Route path='/' element={<Login />} /> */}
-                <Route path='/' element={<Dashboard />} />
+                <Route path='/' element={<Login />} />
+                <Route path='/dashboard' element={<Dashboard />} />
                 <Route path='/dataTable' element={<DataTable />} />
                 <Route path='bin' element={<Bin />} />
             </Routes>
