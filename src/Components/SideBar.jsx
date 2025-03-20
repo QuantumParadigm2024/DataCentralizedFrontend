@@ -22,12 +22,13 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
   const [activeItem, setActiveItem] = useState(null);
 
   return (
-    <Box sx={{ display: "flex", height: "100%" }}>
+    
       <Box
         sx={{
           width: drawerOpen ? 200 : 80,
           bgcolor: "white",
           display: "flex",
+          height: "100%",
           flexDirection: "column",
           alignItems: "center",
           // boxShadow: "2px 0px 5px rgba(0, 0, 0, 0.1)",
@@ -79,7 +80,7 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
           {drawerOpen && <ListItemText primary="Profile" />}
         </Box>
       </Box>
-    </Box>
+   
   );
 };
 
