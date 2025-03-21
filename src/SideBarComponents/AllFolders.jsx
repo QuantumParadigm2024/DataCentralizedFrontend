@@ -17,6 +17,7 @@ import { secretKey } from '../Helper/SecretKey';
 import DeleteIcon from "@mui/icons-material/Delete";
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
+import FolderZipIcon from '@mui/icons-material/FolderZip';
 
 const AllFolders = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -225,6 +226,8 @@ const AllFolders = () => {
             return <TableChartIcon sx={{ color: '#217346' }} />; // Excel Icon (Green)
         } else if (fileName.endsWith('.csv')) {
             return <InsertChartIcon sx={{ color: '#217346' }} />; // CSV Icon (Green)
+        } else if (fileName.endsWith('.zip') || fileName.endsWith('.rar')) {
+            return <FolderZipIcon sx={{ color: '#f0a500' }} />; // ZIP Icon (Orange)
         } else {
             return <InsertDriveFileIcon sx={{ color: '#f8d775' }} />; // Default File Icon
         }
@@ -270,7 +273,7 @@ const AllFolders = () => {
                 {openFolder ? (
                     <Box sx={{ mt: 2 }}>
                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <Typography variant="h6">
+                            <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 'bold' }}>
                                 {filteredFolders.find(f => f.entityId === openFolder)?.folderName || "Folder"}
                             </Typography>
                             <Box>
