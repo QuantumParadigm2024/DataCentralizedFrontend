@@ -186,7 +186,7 @@ const Login = () => {
                             disabled={loading}
                             variant="contained"
                         >
-                            {loading ? <CircularProgress size={24} sx={{ color: "#1976d2" }} /> : "Login"}
+                            {loading ? <CircularProgress size={24} sx={{ color: "#ba343b" }} /> : "Login"}
                         </Button>
                     </Sheet>
                 </Box>

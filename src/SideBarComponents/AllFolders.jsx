@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
-import { Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, IconButton, Input, ListItemIcon } from "@mui/material";
+import { Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton } from "@mui/material";
 import { Search, ViewList, GridView, Folder as FolderIcon, UploadFile } from "@mui/icons-material";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
 import axiosInstance from "../Helper/AxiosInstance";
@@ -14,6 +14,10 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import InsertChartIcon from '@mui/icons-material/InsertChart';
 import CryptoJS from 'crypto-js';
 import { secretKey } from '../Helper/SecretKey';
+import DeleteIcon from "@mui/icons-material/Delete";
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
+import FolderZipIcon from '@mui/icons-material/FolderZip';
 
 const AllFolders = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -23,6 +27,9 @@ const AllFolders = () => {
     const [viewMode, setViewMode] = useState("list");
     const [openFolder, setOpenFolder] = useState(null);
     const [files, setFiles] = useState({});
+    const pageSize = 10;
+    const [pageNo, setPageNo] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
 
     const decryptToken = (encryptedToken) => {
         try {
@@ -41,18 +48,45 @@ const AllFolders = () => {
         fetchFolders();
     }, []);
 
-    const fetchFolders = async () => {
+    const fetchFolders = async (newPageNo = pageNo) => {
         try {
             const response = await axiosInstance.get(`/planotech-inhouse/getFolders`, {
+                params: {
+                    pageNo: newPageNo,
+                    pageSize: pageSize
+                },
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
-            setFolders(response.data.content || []);
+            const fetchedFolders = response.data.content || [];
+            setFolders(fetchedFolders);
+            setTotalPages(response.data.totalPages || Math.ceil(fetchedFolders.length / pageSize));
+            setPageNo(newPageNo);
         } catch (error) {
             console.error("Error fetching folders:", error);
         }
     };
+
+    const handleNextPage = () => {
+        if (pageNo < totalPages - 1) fetchFolders(pageNo + 1);
+    };
+
+    const handlePrevPage = () => {
+        if (pageNo > 0) fetchFolders(pageNo - 1);
+    };
+
+    const handlePageClick = (page) => {
+        fetchFolders(page);
+    };
+
+    const filteredFolders = folders.filter(folder =>
+        folder.folderName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const filteredFiles = openFolder ? (files[openFolder] || []).filter(file =>
+        file.fileName.toLowerCase().includes(searchTerm.toLowerCase())
+    ) : [];
 
     const handleOpen = () => setOpen(true);
 
@@ -146,6 +180,43 @@ const AllFolders = () => {
         }
     };
 
+    const handleLargeFileUpload = async (event, entityId) => {
+        const files = event.target.files[0];
+        if (!files) return;
+
+        const formData = new FormData();
+        formData.append("files", files);
+
+        const toastId = toast.loading("Uploading file...");
+
+        try {
+            const response = await axiosInstance.post(`/planotech-inhouse/upload/largeFile?folderId=${entityId}`, formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            console.log("File uploaded successfully:", response.data);
+            toast.update(toastId, {
+                render: "File uploaded successfully",
+                type: "success",
+                isLoading: false,
+                autoClose: 3000,
+            });
+
+            fetchFiles(entityId);
+        } catch (error) {
+            console.error("Error uploading file:", error);
+            toast.update(toastId, {
+                render: "Error uploading file",
+                type: "error",
+                isLoading: false,
+                autoClose: 3000,
+            });
+        }
+    };
+
     const getFileIcon = (fileName) => {
         if (fileName.endsWith('.pdf')) {
             return <PictureAsPdfIcon sx={{ color: '#de2429' }} />;
@@ -155,6 +226,8 @@ const AllFolders = () => {
             return <TableChartIcon sx={{ color: '#217346' }} />; // Excel Icon (Green)
         } else if (fileName.endsWith('.csv')) {
             return <InsertChartIcon sx={{ color: '#217346' }} />; // CSV Icon (Green)
+        } else if (fileName.endsWith('.zip') || fileName.endsWith('.rar')) {
+            return <FolderZipIcon sx={{ color: '#f0a500' }} />; // ZIP Icon (Orange)
         } else {
             return <InsertDriveFileIcon sx={{ color: '#f8d775' }} />; // Default File Icon
         }
@@ -176,7 +249,7 @@ const AllFolders = () => {
                             <TextField
                                 variant="outlined"
                                 size="small"
-                                placeholder="Search folders"
+                                placeholder={openFolder ? "Search files" : "Search folders"}
                                 fullWidth
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -187,11 +260,11 @@ const AllFolders = () => {
                             />
                         </Grid>
                         {!openFolder && (
-                            <Box>
+                            <Grid item xs={12} sm="auto" sx={{ mt: { xs: 1, sm: 0 } }}>
                                 <Button variant="contained" startIcon={<CreateNewFolderIcon />} onClick={handleOpen}>
                                     Create Folder
                                 </Button>
-                            </Box>
+                            </Grid>
                         )}
                     </Grid>
                 </Box>
@@ -200,15 +273,15 @@ const AllFolders = () => {
                 {openFolder ? (
                     <Box sx={{ mt: 2 }}>
                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <Typography variant="h6">
-                                {folders.find(f => f.entityId === openFolder)?.folderName || "Folder"}
+                            <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 'bold' }}>
+                                {filteredFolders.find(f => f.entityId === openFolder)?.folderName || "Folder"}
                             </Typography>
                             <Box>
                                 <Button
                                     variant="outlined"
                                     startIcon={<UploadFile />}
                                     component="label"
-                                    sx={{ fontWeight: "bold" }}
+                                    sx={{ fontWeight: "bold", mr: 1 }}
                                 >
                                     Upload Files
                                     <Input
@@ -218,10 +291,24 @@ const AllFolders = () => {
                                         onChange={(e) => handleFileUpload(e, openFolder)}
                                     />
                                 </Button>
+                                <Button
+                                    variant="outlined"
+                                    startIcon={<UploadFile />}
+                                    component="label"
+                                    sx={{ fontWeight: "bold" }}
+                                >
+                                    Upload Large Files
+                                    <Input
+                                        type="file"
+                                        sx={{ display: "none" }}
+                                        hidden
+                                        onChange={(e) => handleLargeFileUpload(e, openFolder)}
+                                    />
+                                </Button>
                             </Box>
                         </Box>
 
-                        {files[openFolder] && files[openFolder].length > 0 ? (
+                        {filteredFiles && filteredFiles.length > 0 ? (
                             <Box sx={{ mt: 2 }}>
                                 {/* Title and Back Button in the same row */}
                                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
@@ -235,7 +322,7 @@ const AllFolders = () => {
                                 <Box sx={{ width: '100%' }}>
                                     <Box sx={{
                                         display: 'grid',
-                                        gridTemplateColumns: '2fr 1fr 1fr',
+                                        gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr',
                                         fontWeight: 'bold',
                                         bgcolor: '#f5f5f5',
                                         p: 1,
@@ -245,14 +332,15 @@ const AllFolders = () => {
                                         <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Date Modified</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Size</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
                                     </Box>
                                     <List>
-                                        {files[openFolder].map((file, index) => (
+                                        {filteredFiles.map((file, index) => (
                                             <ListItem
                                                 key={index}
                                                 sx={{
                                                     display: 'grid',
-                                                    gridTemplateColumns: '2fr 1fr 1fr',
+                                                    gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr',
                                                     alignItems: 'center',
                                                     p: 1.5,
                                                     borderBottom: '1px solid #ddd',
@@ -284,6 +372,11 @@ const AllFolders = () => {
                                                 <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
                                                     {Math.round(file.fileSize / 1024)} KB
                                                 </Typography>
+                                                <Tooltip title="Admin access only, employees restricted" arrow>
+                                                    <IconButton sx={{ color: "gray", mr: 15 }}>
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                </Tooltip>
                                             </ListItem>
                                         ))}
                                     </List>
@@ -327,7 +420,7 @@ const AllFolders = () => {
                                 </ToggleButtonGroup>
                             </Grid>
                         </Grid>
-                        {folders.length === 0 ? (
+                        {filteredFolders.length === 0 ? (
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
                                 <Typography color="textSecondary" sx={{ fontSize: '14px', color: 'grey', fontWeight: 'bold' }}>No folders available</Typography>
                             </Box>
@@ -335,7 +428,7 @@ const AllFolders = () => {
                             <Box sx={{ width: '100%', mt: 2 }}>
                                 <Box sx={{
                                     display: 'grid',
-                                    gridTemplateColumns: '2fr 1fr 1fr',
+                                    gridTemplateColumns: '2fr 1.5fr 1.51fr 1fr',
                                     fontWeight: 'bold',
                                     bgcolor: '#f5f5f5',
                                     p: 1,
@@ -345,14 +438,15 @@ const AllFolders = () => {
                                     <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Date Modified</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
                                 </Box>
                                 <List>
-                                    {folders.map((folder) => (
+                                    {filteredFolders.map((folder) => (
                                         <ListItem
                                             key={folder.entityId}
                                             sx={{
                                                 display: 'grid',
-                                                gridTemplateColumns: '2fr 1fr 1fr',
+                                                gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr',
                                                 alignItems: 'center',
                                                 p: 1.5,
                                                 borderBottom: '1px solid #ddd',
@@ -376,14 +470,21 @@ const AllFolders = () => {
                                             <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
                                                 {folder.createdBy ? folder.createdBy : "N/A"}
                                             </Typography>
+
+                                            {/* Delete Icon with Tooltip */}
+                                            <Tooltip title="Admin access only, employees restricted" arrow>
+                                                <IconButton sx={{ color: "gray", mr: 15 }}>
+                                                    <DeleteIcon />
+                                                </IconButton>
+                                            </Tooltip>
                                         </ListItem>
                                     ))}
                                 </List>
                             </Box>
                         ) : (
-                            <Grid container spacing={2} sx={{ mt: 2 }}>
-                                {folders.map((folder) => (
-                                    <Grid item key={folder[0]} xs={6} sm={4} md={3} lg={2}>
+                            <Grid container spacing={2} sx={{ mt: 2, mb: 1 }}>
+                                {filteredFolders.map((folder) => (
+                                    <Grid item key={folder[0]} xs={6} sm={4} md={3} lg={2.4} xl={2.4}>
                                         <Card
                                             sx={{
                                                 display: "flex",
@@ -391,6 +492,7 @@ const AllFolders = () => {
                                                 alignItems: "center",
                                                 cursor: "pointer",
                                                 boxShadow: "0px 2px 5px rgba(0,0,0,0.2)",
+                                                width: "100%",
                                             }}
                                             onClick={() => handleFolderClick(folder[0])}
                                         >
@@ -399,9 +501,15 @@ const AllFolders = () => {
                                                 <Typography
                                                     variant="body2"
                                                     noWrap
-                                                    sx={{ width: "100px", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 'bold', color: '#555555' }}
+                                                    sx={{
+                                                        width: "100px",
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        fontWeight: "bold",
+                                                        color: "#555555",
+                                                    }}
                                                 >
-                                                    {folder[1]}
+                                                    {folder.folderName}
                                                 </Typography>
                                             </CardContent>
                                         </Card>
@@ -409,18 +517,58 @@ const AllFolders = () => {
                                 ))}
                             </Grid>
                         )}
+                        {filteredFolders.length > 0 && (
+                            <Box
+                                sx={{
+                                    position: "sticky",
+                                    bottom: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    backgroundColor: "#fff",
+                                    boxShadow: "0px -2px 5px rgba(0,0,0,0.1)",
+                                    // padding: "10px",
+                                    display: "flex",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    zIndex: 10,
+                                    borderRadius: "12px",
+                                }}
+                            >
+                                <div style={{ display: "flex", justifyContent: "center", padding: "10px" }}>
+                                    <IconButton onClick={handlePrevPage} disabled={pageNo === 0}><ArrowBackIosIcon /></IconButton>
+                                    {Array.from({ length: totalPages }, (_, i) => (
+                                        <Button key={i} onClick={() => handlePageClick(i)} disabled={i === pageNo}>{i + 1}</Button>
+                                    ))}
+                                    <IconButton onClick={handleNextPage} disabled={pageNo === totalPages - 1}><ArrowForwardIosIcon /></IconButton>
+                                </div>
+                            </Box>
+                        )}
                     </Box>
                 )}
 
                 {/* Create Folder Dialog */}
                 <Dialog open={open} onClose={handleClose}>
-                    <DialogTitle>Create New Folder</DialogTitle>
-                    <DialogContent>
-                        <TextField fullWidth value={folderName} placeholder="enter folder name" onChange={(e) => setFolderName(e.target.value)} />
+                    {/* Dialog Title with Proper Styling */}
+                    <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>
+                        Create New Folder
+                    </DialogTitle>
+                    <DialogContent sx={{ minWidth: "300px", paddingBottom: "16px" }}>
+                        <TextField
+                            fullWidth
+                            value={folderName}
+                            placeholder="enter folder name"
+                            onChange={(e) => setFolderName(e.target.value)}
+                        />
                     </DialogContent>
-                    <DialogActions>
-                        <Button onClick={handleClose} color="error">Cancel</Button>
-                        <Button onClick={handleCreateFolder} variant="contained">Create</Button>
+                    <DialogActions sx={{ padding: "16px" }}>
+                        <Button onClick={handleClose} color="error" sx={{ fontSize: "bold" }}>Cancel</Button>
+                        <Button
+                            onClick={handleCreateFolder}
+                            variant="outlined"
+                            sx={{ borderRadius: "16px", fontWeight: "bold" }}
+                        >
+                            Create
+                        </Button>
                     </DialogActions>
                 </Dialog>
             </Box>

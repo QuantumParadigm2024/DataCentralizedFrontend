@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import {
     CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography, IconButton, Popover, Button
@@ -116,6 +117,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
     const handleNextPage = () => {
         if (pageNo < totalPages - 1) fetchData(pageNo + 1);
     };
+
     const handlePrevPage = () => {
         if (pageNo > 0) fetchData(pageNo - 1);
     };
@@ -197,7 +199,6 @@ const DataTable = ({ refreshData, searchTerm }) => {
                 )}
             </TableContainer>
             {filteredData.length > 0 && (
-
                 <div style={{ display: "flex", justifyContent: "center", padding: "10px" }}>
                     <IconButton onClick={handlePrevPage} disabled={pageNo === 0}><ArrowBackIosIcon /></IconButton>
                     {Array.from({ length: totalPages }, (_, i) => (

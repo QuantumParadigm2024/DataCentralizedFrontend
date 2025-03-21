@@ -6,15 +6,16 @@ import './global.css'
 import DataTable from './Components/DataTable'
 import Login from './Components/Login'
 import Bin from './SideBarComponents/Bin'
+import PrivateRoute from './Helper/PrivateRoute'
 
 const App = () => {
     return (
         <BrowserRouter>
             <Routes>
                 <Route path='/' element={<Login />} />
-                <Route path='/dashboard' element={<Dashboard />} />
-                <Route path='/dataTable' element={<DataTable />} />
-                <Route path='bin' element={<Bin />} />
+                <Route path='/dashboard' element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+                <Route path='/dataTable' element={<PrivateRoute><DataTable /></PrivateRoute>} />
+                <Route path='bin' element={<PrivateRoute><Bin /></PrivateRoute>} />
             </Routes>
         </BrowserRouter>
     )
