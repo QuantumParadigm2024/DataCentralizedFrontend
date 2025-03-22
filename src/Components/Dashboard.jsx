@@ -16,6 +16,7 @@ import Collections from "../SideBarComponents/Collections";
 import Favourites from "../SideBarComponents/Favourites";
 import Logo from "../Assets/Planotech Logo Black.png";
 import AllFolders from "../SideBarComponents/AllFolders";
+import NavColorCode from "./NavColorCode";
 
 const Dashboard = () => {
     const [selectedContent, setSelectedContent] = useState("allFiles");
@@ -93,7 +94,7 @@ const Dashboard = () => {
                 </Box>
 
                 <Box sx={{ width: "100%", height: "100%" }}>
-                    <Bin />
+                    <NavColorCode />
                 </Box>
             </Box>
 
