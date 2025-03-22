@@ -9,14 +9,14 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import SideBar from "./SideBar";
-import Bin from "../SideBarComponents/Bin";
 import Recent from "../SideBarComponents/Recent";
 import AllFiles from "../SideBarComponents/AllFiles";
 import Collections from "../SideBarComponents/Collections";
-import Favourites from "../SideBarComponents/Favourites";
+import Starred from "../SideBarComponents/Starred";
 import Logo from "../Assets/Planotech Logo Black.png";
 import AllFolders from "../SideBarComponents/AllFolders";
 import NavColorCode from "./NavColorCode";
+import Profile from "../SideBarComponents/Profile";
 
 const Dashboard = () => {
     const [selectedContent, setSelectedContent] = useState("allFiles");
@@ -34,12 +34,12 @@ const Dashboard = () => {
                 return <Recent />;
             case "allFolders":
                 return <AllFolders />;
-            case "bin":
-                return <Bin />;
             case "collections":
                 return <Collections />;
-            case "favourites":
-                return <Favourites />;
+            case "starred":
+                return <Starred />;
+            case "profile":
+                return <Profile />;
             default:
                 return <AllFiles />;
         }
