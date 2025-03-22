@@ -126,16 +126,47 @@ const DataTable = ({ refreshData, searchTerm }) => {
         fetchData(page);
     };
 
-    const handleEmailClick = (event, email) => {
-        event.preventDefault(); // Prevent default link behavior
-        try {
-           window.location.href = `mailto:${email}`;
-           
+    const handleEmailClick = (email) => {
 
+        console.log("Email link clicked:", email); // Add console log
+        try {
+            window.location.href = `mailto:${email}`;
         } catch (error) {
             console.error("Error opening mailto link:", error);
             alert("Could not open email client. Please check your email settings.");
         }
+    };
+    const renderPagination = () => {
+        const pages = [];
+        const visiblePages = 4;
+        const startPage = Math.max(0, pageNo - Math.floor(visiblePages / 2));
+        const endPage = Math.min(totalPages, startPage + visiblePages);
+
+        if (startPage > 0) {
+            pages.push(<Button key="first" onClick={() => handlePageClick(0)}>1</Button>);
+            if (startPage > 1) pages.push(<span key="start-ellipsis">...</span>);
+        }
+
+        for (let i = startPage; i < endPage; i++) {
+            pages.push(
+                <Button key={i} onClick={() => handlePageClick(i)} disabled={i === pageNo}>
+                    {i + 1}
+                </Button>
+            );
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) pages.push(<span key="end-ellipsis">...</span>);
+            pages.push(<Button key="last" onClick={() => handlePageClick(totalPages - 1)}>{totalPages}</Button>);
+        }
+
+        return (
+            <div style={{ display: "flex", justifyContent: "center", padding: "10px", alignItems: "center" }}>
+                <IconButton onClick={handlePrevPage} disabled={pageNo === 0}><ArrowBackIosIcon /></IconButton>
+                {pages}
+                <IconButton onClick={handleNextPage} disabled={pageNo === totalPages - 1}><ArrowForwardIosIcon /></IconButton>
+            </div>
+        );
     };
 
     return (
@@ -167,11 +198,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
                                 <TableRow key={row.id} sx={{ '& td': { height: "30px", fontSize: "0.8rem" } }}>
                                     <TableCell>{index + 1 + pageNo * pageSize}</TableCell>
                                     <TableCell>{row.name}</TableCell>
-                                    <TableCell>
-                                        <a href={`mailto:${row.email}`} onClick={(event) => handleEmailClick(event, row.email)} style={{ color: 'primary.main', cursor: 'pointer', textDecoration: 'underline' }}>
-                                            {row.email}
-                                        </a>
-                                    </TableCell>
+                                    <TableCell><a href={`mailto:${row.email}`} target="_blank" rel="noopener noreferrer">{row.email}</a></TableCell>
                                     <TableCell>{/^([6-9])\d{9}$/.test(row.phoneNumber) ? `+91${row.phoneNumber}` : row.phoneNumber}</TableCell>
                                     <TableCell onClick={() => handleRowClick(row.id)}>
                                         {truncateText(row.designation, expandedRows[row.id])}
@@ -192,15 +219,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
                     </Table>
                 )}
             </TableContainer>
-            {filteredData.length > 0 && (
-                <div style={{ display: "flex", justifyContent: "center", padding: "10px" }}>
-                    <IconButton onClick={handlePrevPage} disabled={pageNo === 0}><ArrowBackIosIcon /></IconButton>
-                    {Array.from({ length: totalPages }, (_, i) => (
-                        <Button key={i} onClick={() => handlePageClick(i)} disabled={i === pageNo}>{i + 1}</Button>
-                    ))}
-                    <IconButton onClick={handleNextPage} disabled={pageNo === totalPages - 1}><ArrowForwardIosIcon /></IconButton>
-                </div>
-            )}
+            {filteredData.length > 0 && renderPagination()}
             <Popover
                 open={open}
                 anchorEl={anchorEl}
