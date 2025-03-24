@@ -16,9 +16,18 @@ import StarIcon from "@mui/icons-material/Star";
 import FileCopyIcon from "@mui/icons-material/FileCopy";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import MenuIcon from '@mui/icons-material/Menu';
+import LogoutIcon from "@mui/icons-material/Logout";
+import { useNavigate } from "react-router-dom";
 
 const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
   const [activeItem, setActiveItem] = useState(null);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    console.log("Logging out...");
+    sessionStorage.removeItem("dc");
+    navigate("/");
+  };
 
   return (
 
@@ -87,6 +96,23 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
               <AccountCircleIcon />
             </ListItemIcon>
             {drawerOpen && <ListItemText primary="Profile" />}
+          </ListItemButton>
+        </ListItem>
+      </List>
+
+      <List sx={{ width: "100%", mt: 9 }}>
+        <ListItem key="logout" disablePadding>
+          <ListItemButton
+            onClick={handleLogout}
+            sx={{
+              justifyContent: drawerOpen ? "flex-start" : "center",
+              color: "red",
+            }}
+          >
+            <ListItemIcon sx={{ justifyContent: "center", color: "#ba343b" }}>
+              <LogoutIcon />
+            </ListItemIcon>
+            {drawerOpen && <ListItemText primary="Logout" sx={{ color: "#ba343b", fontWeight: 'bold', fontSize: '12px' }} />}
           </ListItemButton>
         </ListItem>
       </List>
