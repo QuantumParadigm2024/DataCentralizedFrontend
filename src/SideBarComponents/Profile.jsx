@@ -65,6 +65,9 @@ const Profile = () => {
             overflow="hidden"
         >
             <Card sx={{ maxWidth: 500, p: 2, boxShadow: 5, borderRadius: 3 }}>
+                <Typography sx={{ textAlign: 'center', fontWeight: 'bold', fontSize: '20px', mb: 2, color: '#ba343b' }}>
+                    User Profile
+                </Typography>
                 <Box display="flex" flexDirection="column" alignItems="center">
                     <Avatar
                         sx={{ width: 100, height: 100, mb: 2 }}
