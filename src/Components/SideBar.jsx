@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState } from "react";
 import {
   Box,
@@ -56,8 +57,8 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
         {[
           { text: "All Files", icon: <FileCopyIcon sx={{ fontSize: 28 }} />, key: "allFiles" },
           { text: "All Folders", icon: <FolderIcon sx={{ fontSize: 28 }} />, key: "allFolders" },
-          { text: "Recents", icon: <AccessTimeIcon sx={{ fontSize: 28 }} />, key: "recent" },
-          { text: "Collections", icon: <CollectionsIcon sx={{ fontSize: 28 }} />, key: "collections" },
+          // { text: "Recents", icon: <AccessTimeIcon sx={{ fontSize: 28 }} />, key: "recent" },
+          // { text: "Collections", icon: <CollectionsIcon sx={{ fontSize: 28 }} />, key: "collections" },
           { text: "Starred", icon: <StarIcon sx={{ fontSize: 28 }} />, key: "starred" },
         ].map(({ text, icon, key }) => (
           <ListItem key={key} disablePadding>
@@ -78,43 +79,33 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
         ))}
       </List>
 
-      <Divider sx={{ width: "100%", my: 1 }} />
+      <Divider sx={{ width: "100%", my: 2 }} />
 
-      <List sx={{ width: "100%" }}>
-        <ListItem key="profile" disablePadding>
-          <ListItemButton
-            onClick={() => {
-              setSelectedContent("profile");
-              setActiveItem("profile");
-            }}
-            sx={{
-              justifyContent: drawerOpen ? "flex-start" : "center",
-              backgroundColor: activeItem === "profile" ? "#f0f0f0" : "transparent",
-            }}
-          >
-            <ListItemIcon sx={{ justifyContent: "center", fontSize: 28 }}>
-              <AccountCircleIcon />
-            </ListItemIcon>
-            {drawerOpen && <ListItemText primary="Profile" />}
-          </ListItemButton>
-        </ListItem>
-      </List>
-
-      <List sx={{ width: "100%", mt: 9 }}>
-        <ListItem key="logout" disablePadding>
-          <ListItemButton
-            onClick={handleLogout}
-            sx={{
-              justifyContent: drawerOpen ? "flex-start" : "center",
-              color: "red",
-            }}
-          >
-            <ListItemIcon sx={{ justifyContent: "center", color: "#ba343b" }}>
-              <LogoutIcon />
-            </ListItemIcon>
-            {drawerOpen && <ListItemText primary="Logout" sx={{ color: "#ba343b", fontWeight: 'bold', fontSize: '12px' }} />}
-          </ListItemButton>
-        </ListItem>
+      <List sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
+        {[
+          { text: "Profile", icon: <AccountCircleIcon sx={{ fontSize: 28 }} />, key: "profile" },
+          { text: "Logout", icon: <LogoutIcon sx={{ fontSize: 28 }} />, key: "logout", onClick: handleLogout },
+        ].map(({ text, icon, key, onClick }) => (
+          <ListItem key={key} disablePadding>
+            <ListItemButton
+              onClick={() => {
+                if (key === "logout") {
+                  onClick?.(); 
+                } else {
+                  setSelectedContent(key);
+                  setActiveItem(key);
+                }
+              }}
+              sx={{
+                justifyContent: drawerOpen ? "flex-start" : "center",
+                backgroundColor: activeItem === key ? "#f0f0f0" : "transparent",
+              }}
+            >
+              <ListItemIcon sx={{ justifyContent: "center" }}>{icon}</ListItemIcon>
+              {drawerOpen && <ListItemText primary={text} />}
+            </ListItemButton>
+          </ListItem>
+        ))}
       </List>
     </Box>
   );

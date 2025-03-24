@@ -2,7 +2,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton } from "@mui/material";
-import { Search, ViewList, GridView, Folder as FolderIcon, UploadFile } from "@mui/icons-material";
+import { Search, ViewList, GridView, Folder as FolderIcon, UploadFile, Star, StarBorder } from "@mui/icons-material";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
 import axiosInstance from "../Helper/AxiosInstance";
 import { toast, ToastContainer } from "react-toastify";
@@ -30,6 +30,21 @@ const AllFolders = () => {
     const pageSize = 10;
     const [pageNo, setPageNo] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+
+    const [starredFolders, setStarredFolders] = useState(() => {
+        return JSON.parse(localStorage.getItem("starredFolders")) || [];
+    });
+
+    const toggleStar = (folderName) => {
+        let updatedStarredFolders;
+        if (starredFolders.includes(folderName)) {
+            updatedStarredFolders = starredFolders.filter(name => name !== folderName);
+        } else {
+            updatedStarredFolders = [...starredFolders, folderName];
+        }
+        setStarredFolders(updatedStarredFolders);
+        localStorage.setItem("starredFolders", JSON.stringify(updatedStarredFolders));
+    };
 
     const decryptToken = (encryptedToken) => {
         try {
@@ -428,7 +443,7 @@ const AllFolders = () => {
                             <Box sx={{ width: '100%', mt: 2 }}>
                                 <Box sx={{
                                     display: 'grid',
-                                    gridTemplateColumns: '2fr 1.5fr 1.51fr 1fr',
+                                    gridTemplateColumns: '1.5fr 1.5fr 1.5fr 0.5fr 0.5fr',
                                     fontWeight: 'bold',
                                     bgcolor: '#f5f5f5',
                                     p: 1,
@@ -438,6 +453,7 @@ const AllFolders = () => {
                                     <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Date Modified</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
                                 </Box>
                                 <List>
@@ -446,7 +462,7 @@ const AllFolders = () => {
                                             key={folder.entityId}
                                             sx={{
                                                 display: 'grid',
-                                                gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr',
+                                                gridTemplateColumns: '1.5fr 1.5fr 1.5fr 0.5fr 0.5fr',
                                                 alignItems: 'center',
                                                 p: 1.5,
                                                 borderBottom: '1px solid #ddd',
@@ -470,10 +486,13 @@ const AllFolders = () => {
                                             <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
                                                 {folder.createdBy ? folder.createdBy : "N/A"}
                                             </Typography>
-
-                                            {/* Delete Icon with Tooltip */}
+                                            <Tooltip title="Star this folder">
+                                                <IconButton onClick={() => toggleStar(folder.folderName)}>
+                                                    {starredFolders.includes(folder.folderName) ? <Star sx={{ color: "gold", mr: 8 }} /> : <StarBorder sx={{ mr: 8 }} />}
+                                                </IconButton>
+                                            </Tooltip>
                                             <Tooltip title="Admin access only, employees restricted" arrow>
-                                                <IconButton sx={{ color: "gray", mr: 15 }}>
+                                                <IconButton sx={{ color: "gray", mr: 5 }}>
                                                     <DeleteIcon />
                                                 </IconButton>
                                             </Tooltip>
