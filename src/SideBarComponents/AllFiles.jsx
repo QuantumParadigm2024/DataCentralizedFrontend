@@ -48,7 +48,19 @@ const AllFiles = () => {
   const handleOpenCategoryDialog = (event) => {
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
-    setSelectedFiles(files);
+
+    // Filter files to include only CSV and Excel (.xls, .xlsx) files
+    const allowedFiles = files.filter((file) => {
+      const fileType = file.name.toLowerCase();
+      return fileType.endsWith('.csv') || fileType.endsWith('.xls') || fileType.endsWith('.xlsx');
+    });
+
+    if (allowedFiles.length === 0) {
+      toast.error("Please select only CSV or Excel files.");
+      return;
+    }
+
+    setSelectedFiles(allowedFiles);
     setOpenCategoryDialog(true);
   };
 
@@ -86,7 +98,7 @@ const AllFiles = () => {
     const formData = new FormData();
     selectedFiles.forEach((file) => formData.append("file", file));
     formData.append("category", selectedCategory);
-    formData.append("enteredBy", team); 
+    formData.append("enteredBy", team);
 
     try {
       await axiosInstance.post("/planotech-inhouse/importCustomers", formData, {
@@ -161,6 +173,7 @@ const AllFiles = () => {
             onChange={handleOpenCategoryDialog}
             style={{ display: "none" }}
             id="file-upload"
+            accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           />
         </Grid>
 

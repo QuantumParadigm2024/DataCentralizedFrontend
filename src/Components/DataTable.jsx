@@ -9,6 +9,7 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import CryptoJS from 'crypto-js';
 import { secretKey } from '../Helper/SecretKey';
+import SettingsEthernetIcon from '@mui/icons-material/SettingsEthernet';
 
 const DataTable = ({ refreshData, searchTerm }) => {
     const [data, setData] = useState([]);
@@ -42,7 +43,7 @@ const DataTable = ({ refreshData, searchTerm }) => {
     const truncateText = (text, isExpanded) => {
         if (isExpanded || !text) return text;
         const words = text.split(' ');
-        return words.length > 2 ? words.slice(0, 2).join(' ') + '...' : text;
+        return words.length > 2 ? words.slice(0, 2).join(' ') + ' ...' : text;
     };
 
     useEffect(() => {
@@ -126,16 +127,6 @@ const DataTable = ({ refreshData, searchTerm }) => {
         fetchData(page);
     };
 
-    const handleEmailClick = (email) => {
-
-        console.log("Email link clicked:", email); // Add console log
-        try {
-            window.location.href = `mailto:${email}`;
-        } catch (error) {
-            console.error("Error opening mailto link:", error);
-            alert("Could not open email client. Please check your email settings.");
-        }
-    };
     const renderPagination = () => {
         const pages = [];
         const visiblePages = 4;
@@ -198,8 +189,12 @@ const DataTable = ({ refreshData, searchTerm }) => {
                                 <TableRow key={row.id} sx={{ '& td': { height: "30px", fontSize: "0.8rem" } }}>
                                     <TableCell>{index + 1 + pageNo * pageSize}</TableCell>
                                     <TableCell>{row.name}</TableCell>
-                                    <TableCell><a href={`mailto:${row.email}`} target="_blank" rel="noopener noreferrer">{row.email}</a></TableCell>
-                                    <TableCell>{/^([6-9])\d{9}$/.test(row.phoneNumber) ? `+91${row.phoneNumber}` : row.phoneNumber}</TableCell>
+                                    <TableCell>
+                                        <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${row.email}`} target="_blank" rel="noopener noreferrer">
+                                            {row.email}
+                                        </a>
+                                    </TableCell>
+                                    <TableCell>{/^([6-9])\d{9}$/.test(row.phoneNumber) && row.phoneNumber.length === 10 ? `+91${row.phoneNumber}` : "Wrong Number"}</TableCell>
                                     <TableCell onClick={() => handleRowClick(row.id)}>
                                         {truncateText(row.designation, expandedRows[row.id])}
                                     </TableCell>
