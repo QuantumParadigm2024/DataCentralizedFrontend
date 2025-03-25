@@ -1,11 +1,15 @@
-import React from 'react'
+import React from 'react';
+import { Box, Typography,} from '@mui/material';
 
-const Favourites = () => {
-  return (
-    <div>
-      <h1>Starred</h1>
-    </div>
-  )
-}
+const Starred = () => {
 
-export default Favourites
+    return (
+        <Box sx={{ mt: 1 }}>
+            <Typography variant="h6" sx={{ fontSize: '18px', fontWeight: 'bold' }}>
+                Starred Files
+            </Typography>
+        </Box>
+    );
+};
+
+export default Starred;
