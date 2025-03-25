@@ -31,20 +31,20 @@ const AllFolders = () => {
     const [pageNo, setPageNo] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
-    const [starredFolders, setStarredFolders] = useState(() => {
-        return JSON.parse(localStorage.getItem("starredFolders")) || [];
-    });
+    // const [starredFolders, setStarredFolders] = useState(() => {
+    //     return JSON.parse(localStorage.getItem("starredFolders")) || [];
+    // });
 
-    const toggleStar = (folderName) => {
-        let updatedStarredFolders;
-        if (starredFolders.includes(folderName)) {
-            updatedStarredFolders = starredFolders.filter(name => name !== folderName);
-        } else {
-            updatedStarredFolders = [...starredFolders, folderName];
-        }
-        setStarredFolders(updatedStarredFolders);
-        localStorage.setItem("starredFolders", JSON.stringify(updatedStarredFolders));
-    };
+    // const toggleStar = (folderName) => {
+    //     let updatedStarredFolders;
+    //     if (starredFolders.includes(folderName)) {
+    //         updatedStarredFolders = starredFolders.filter(name => name !== folderName);
+    //     } else {
+    //         updatedStarredFolders = [...starredFolders, folderName];
+    //     }
+    //     setStarredFolders(updatedStarredFolders);
+    //     localStorage.setItem("starredFolders", JSON.stringify(updatedStarredFolders));
+    // };
 
     const decryptToken = (encryptedToken) => {
         try {
@@ -388,7 +388,7 @@ const AllFolders = () => {
                                                     {Math.round(file.fileSize / 1024)} KB
                                                 </Typography>
                                                 <Tooltip title="Admin access only, employees restricted" arrow>
-                                                    <IconButton sx={{ color: "gray", mr: 15 }}>
+                                                    <IconButton sx={{ color: "gray", mr: 4 }}>
                                                         <DeleteIcon />
                                                     </IconButton>
                                                 </Tooltip>
@@ -453,7 +453,7 @@ const AllFolders = () => {
                                     <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Date Modified</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
+                                    {/* <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography> */}
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
                                 </Box>
                                 <List>
@@ -467,7 +467,9 @@ const AllFolders = () => {
                                                 p: 1.5,
                                                 borderBottom: '1px solid #ddd',
                                                 borderRadius: '8px',
-                                                cursor: 'pointer'
+                                                cursor: 'pointer',
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
                                             }}
                                             onClick={() => handleFolderClick(folder.entityId)}
                                         >
@@ -475,9 +477,18 @@ const AllFolders = () => {
                                                 <FolderIcon sx={{ color: "#f8d775", mr: 1 }} />
                                                 <Typography
                                                     variant="body1"
-                                                    sx={{ color: "#555555", fontSize: "14px", fontWeight: "bold" }}
+                                                    sx={{
+                                                        color: "#555555",
+                                                        fontSize: "14px",
+                                                        fontWeight: "bold",
+                                                        whiteSpace: "nowrap",
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        maxWidth: "200px" 
+                                                    }}
+                                                    title={folder.folderName} 
                                                 >
-                                                    {folder.folderName}
+                                                    {folder.folderName.length > 25 ? `${folder.folderName.slice(0, 25)}...` : folder.folderName}
                                                 </Typography>
                                             </Box>
                                             <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
@@ -486,11 +497,11 @@ const AllFolders = () => {
                                             <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
                                                 {folder.createdBy ? folder.createdBy : "N/A"}
                                             </Typography>
-                                            <Tooltip title="Star this folder">
+                                            {/* <Tooltip title="Star this folder" arrow>
                                                 <IconButton onClick={() => toggleStar(folder.folderName)}>
                                                     {starredFolders.includes(folder.folderName) ? <Star sx={{ color: "gold", mr: 8 }} /> : <StarBorder sx={{ mr: 8 }} />}
                                                 </IconButton>
-                                            </Tooltip>
+                                            </Tooltip> */}
                                             <Tooltip title="Admin access only, employees restricted" arrow>
                                                 <IconButton sx={{ color: "gray", mr: 5 }}>
                                                     <DeleteIcon />
@@ -513,7 +524,7 @@ const AllFolders = () => {
                                                 boxShadow: "0px 2px 5px rgba(0,0,0,0.2)",
                                                 width: "100%",
                                             }}
-                                            onClick={() => handleFolderClick(folder[0])}
+                                            onClick={() => handleFolderClick(folder.entityId)}
                                         >
                                             <FolderIcon sx={{ fontSize: 80, color: "#f8d775", mt: 2 }} />
                                             <CardContent sx={{ textAlign: "center" }}>
