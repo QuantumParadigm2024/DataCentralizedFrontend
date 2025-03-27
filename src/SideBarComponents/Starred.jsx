@@ -90,7 +90,7 @@ const Starred = () => {
             return <InsertChartIcon sx={{ color: '#217346' }} />;
         } else if (fileName.endsWith('.zip') || fileName.endsWith('.rar')) {
             return <FolderZipIcon sx={{ color: '#f0a500' }} />;
-        } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || fileName.endsWith('.gif') || fileName.endsWith('.svg')) {
+        } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')|| fileName.endsWith('.PNG') || fileName.endsWith('.gif') || fileName.endsWith('.svg')) {
             return <ImageIcon sx={{ color: '#098dc6' }} />; 
         } else {
             return <InsertDriveFileIcon sx={{ color: '#f8d775' }} />;
