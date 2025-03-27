@@ -113,7 +113,7 @@ const AllFiles = () => {
   };
 
   const handleSendFiles = async () => {
-    if (!chooseCategory) {
+    if (!selectedCategory) {
       toast.error("Please select a category before uploading.");
       return;
     }
@@ -200,7 +200,9 @@ const AllFiles = () => {
                   id="category-choose"
                   value={chooseCategory}
                   label="choose Category"
-                  onChange={setChoosecategory}
+                  onChange={(e) => {
+                    setChoosecategory(e.target.value);
+                  }}  
                   
                   >
                     {[
@@ -365,7 +367,7 @@ const AllFiles = () => {
         </Box>
   
         <Box sx={{ mt: 2, height: calculateDataTableHeight() }}>
-          <DataTable refreshData={refreshData} searchTerm={searchTerm} selectedCategory={selectedCategory}/>
+          <DataTable refreshData={refreshData} searchTerm={searchTerm} selectedCategory={selectedCategory} data={tableData}/>
         </Box>
       </Box>
     );
