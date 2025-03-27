@@ -18,6 +18,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import FolderZipIcon from '@mui/icons-material/FolderZip';
+import ImageIcon from '@mui/icons-material/Image';
 
 const AllFolders = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -30,21 +31,8 @@ const AllFolders = () => {
     const pageSize = 10;
     const [pageNo, setPageNo] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
-
-    // const [starredFolders, setStarredFolders] = useState(() => {
-    //     return JSON.parse(localStorage.getItem("starredFolders")) || [];
-    // });
-
-    // const toggleStar = (folderName) => {
-    //     let updatedStarredFolders;
-    //     if (starredFolders.includes(folderName)) {
-    //         updatedStarredFolders = starredFolders.filter(name => name !== folderName);
-    //     } else {
-    //         updatedStarredFolders = [...starredFolders, folderName];
-    //     }
-    //     setStarredFolders(updatedStarredFolders);
-    //     localStorage.setItem("starredFolders", JSON.stringify(updatedStarredFolders));
-    // };
+    const [starredFolders, setStarredFolders] = useState([]);
+    const [starredFiles, setStarredFiles] = useState([]);
 
     const decryptToken = (encryptedToken) => {
         try {
@@ -61,6 +49,67 @@ const AllFolders = () => {
 
     useEffect(() => {
         fetchFolders();
+    }, []);
+
+    const toggleFolderStar = async (entityId) => {
+        try {
+            const isStarred = starredFolders.some(folder => folder.entityId === entityId);
+            const updatedStarredFolders = isStarred
+                ? starredFolders.filter(folder => folder.entityId !== entityId)
+                : [...starredFolders, { entityId }];
+            setStarredFolders(updatedStarredFolders);
+            await axiosInstance.post("/planotech-inhouse/add/favorite", {
+                entityId: entityId,
+                type: "folder"
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            });
+
+        } catch (error) {
+            console.error("Error toggling star:", error);
+        }
+    };
+
+    const toggleFileStar = async (id) => {
+        try {
+            const isStarred = starredFiles.some(file => file.id === id);
+            const updatedStarredFiles = isStarred
+                ? starredFiles.filter(file => file.id !== id)
+                : [...starredFiles, { id }];
+            setStarredFiles(updatedStarredFiles);
+            await axiosInstance.post("/planotech-inhouse/add/favorite", {
+                entityId: id,
+                type: "file"
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            });
+
+        } catch (error) {
+            console.error("Error toggling star:", error);
+        }
+    }
+
+    useEffect(() => {
+        const fetchStarredFoldersandFiles = async () => {
+            try {
+                const response = await axiosInstance.get("/planotech-inhouse/getAll/favorites", {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+                setStarredFolders(response.data.data || []);
+                setStarredFiles(response.data.data || []);
+            } catch (error) {
+                console.error("Error fetching starred folders:", error);
+            }
+        };
+        fetchStarredFoldersandFiles();
     }, []);
 
     const fetchFolders = async (newPageNo = pageNo) => {
@@ -236,15 +285,17 @@ const AllFolders = () => {
         if (fileName.endsWith('.pdf')) {
             return <PictureAsPdfIcon sx={{ color: '#de2429' }} />;
         } else if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
-            return <DescriptionIcon sx={{ color: '#2B579A' }} />; // Word Icon (Blue)
+            return <DescriptionIcon sx={{ color: '#2B579A' }} />; 
         } else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
-            return <TableChartIcon sx={{ color: '#217346' }} />; // Excel Icon (Green)
+            return <TableChartIcon sx={{ color: '#217346' }} />; 
         } else if (fileName.endsWith('.csv')) {
-            return <InsertChartIcon sx={{ color: '#217346' }} />; // CSV Icon (Green)
+            return <InsertChartIcon sx={{ color: '#217346' }} />; 
         } else if (fileName.endsWith('.zip') || fileName.endsWith('.rar')) {
-            return <FolderZipIcon sx={{ color: '#f0a500' }} />; // ZIP Icon (Orange)
+            return <FolderZipIcon sx={{ color: '#f0a500' }} />; 
+        } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')|| fileName.endsWith('.PNG') || fileName.endsWith('.gif') || fileName.endsWith('.svg')) {
+            return <ImageIcon sx={{ color: '#098dc6' }} />; 
         } else {
-            return <InsertDriveFileIcon sx={{ color: '#f8d775' }} />; // Default File Icon
+            return <InsertDriveFileIcon sx={{ color: '#f8d775' }} />;
         }
     };
 
@@ -337,7 +388,7 @@ const AllFolders = () => {
                                 <Box sx={{ width: '100%' }}>
                                     <Box sx={{
                                         display: 'grid',
-                                        gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr',
+                                        gridTemplateColumns: '1.5fr 1.5fr 1.5fr 0.5fr 0.5fr',
                                         fontWeight: 'bold',
                                         bgcolor: '#f5f5f5',
                                         p: 1,
@@ -345,8 +396,9 @@ const AllFolders = () => {
                                         borderRadius: '8px'
                                     }}>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
-                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Date Modified</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Size</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
                                     </Box>
                                     <List>
@@ -355,12 +407,13 @@ const AllFolders = () => {
                                                 key={index}
                                                 sx={{
                                                     display: 'grid',
-                                                    gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr',
+                                                    gridTemplateColumns: '1.5fr 1.5fr 1.5fr 0.5fr 0.5fr',
                                                     alignItems: 'center',
                                                     p: 1.5,
                                                     borderBottom: '1px solid #ddd',
                                                     borderRadius: '8px',
-                                                    cursor: 'pointer'
+                                                    cursor: 'pointer',
+                                                    "&:hover": { bgcolor: "#f9f9f9" }
                                                 }}
                                                 onClick={() => {
                                                     if (file.type === "application/pdf") {
@@ -377,8 +430,20 @@ const AllFolders = () => {
                                             >
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     {getFileIcon(file.fileName)}
-                                                    <Typography variant="body1" sx={{ color: "#555555", fontSize: '14px', fontWeight: 'bold' }}>
-                                                        {file.fileName}
+                                                    <Typography
+                                                        variant="body1"
+                                                        sx={{
+                                                            color: "#555555",
+                                                            fontSize: "14px",
+                                                            fontWeight: "bold",
+                                                            whiteSpace: "nowrap",
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            maxWidth: "200px"
+                                                        }}
+                                                        title={file.fileName}
+                                                    >
+                                                        {file.fileName.length > 20 ? `${file.fileName.slice(0, 20)}...` : file.fileName}
                                                     </Typography>
                                                 </Box>
                                                 <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
@@ -387,6 +452,20 @@ const AllFolders = () => {
                                                 <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
                                                     {Math.round(file.fileSize / 1024)} KB
                                                 </Typography>
+                                                <Tooltip title="Star this folder" arrow>
+                                                    <IconButton
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            toggleFileStar(file.id);
+                                                        }}
+                                                    >
+                                                        {starredFiles.some(fav => fav.id === file.id) ? (
+                                                            <Star sx={{ color: "gold", mr: 8 }} />
+                                                        ) : (
+                                                            <StarBorder sx={{ mr: 8 }} />
+                                                        )}
+                                                    </IconButton>
+                                                </Tooltip>
                                                 <Tooltip title="Admin access only, employees restricted" arrow>
                                                     <IconButton sx={{ color: "gray", mr: 4 }}>
                                                         <DeleteIcon />
@@ -451,9 +530,9 @@ const AllFolders = () => {
                                     borderRadius: '8px'
                                 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Date Modified</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
-                                    {/* <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography> */}
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
                                 </Box>
                                 <List>
@@ -470,6 +549,7 @@ const AllFolders = () => {
                                                 cursor: 'pointer',
                                                 overflow: "hidden",
                                                 textOverflow: "ellipsis",
+                                                "&:hover": { bgcolor: "#f9f9f9" }
                                             }}
                                             onClick={() => handleFolderClick(folder.entityId)}
                                         >
@@ -484,11 +564,11 @@ const AllFolders = () => {
                                                         whiteSpace: "nowrap",
                                                         overflow: "hidden",
                                                         textOverflow: "ellipsis",
-                                                        maxWidth: "200px" 
+                                                        maxWidth: "200px"
                                                     }}
-                                                    title={folder.folderName} 
+                                                    title={folder.folderName}
                                                 >
-                                                    {folder.folderName.length > 25 ? `${folder.folderName.slice(0, 25)}...` : folder.folderName}
+                                                    {folder.folderName.length > 20 ? `${folder.folderName.slice(0, 20)}...` : folder.folderName}
                                                 </Typography>
                                             </Box>
                                             <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
@@ -497,11 +577,19 @@ const AllFolders = () => {
                                             <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
                                                 {folder.createdBy ? folder.createdBy : "N/A"}
                                             </Typography>
-                                            {/* <Tooltip title="Star this folder" arrow>
-                                                <IconButton onClick={() => toggleStar(folder.folderName)}>
-                                                    {starredFolders.includes(folder.folderName) ? <Star sx={{ color: "gold", mr: 8 }} /> : <StarBorder sx={{ mr: 8 }} />}
+                                            <Tooltip title="Star this folder" arrow>
+                                                <IconButton
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        toggleFolderStar(folder.entityId);
+                                                    }}>
+                                                    {starredFolders.some(fav => fav.entityId === folder.entityId) ? (
+                                                        <Star sx={{ color: "gold", mr: 8 }} />
+                                                    ) : (
+                                                        <StarBorder sx={{ mr: 8 }} />
+                                                    )}
                                                 </IconButton>
-                                            </Tooltip> */}
+                                            </Tooltip>
                                             <Tooltip title="Admin access only, employees restricted" arrow>
                                                 <IconButton sx={{ color: "gray", mr: 5 }}>
                                                     <DeleteIcon />

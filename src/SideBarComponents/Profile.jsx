@@ -66,7 +66,7 @@ const Profile = () => {
         >
             <Card sx={{ maxWidth: 500, p: 2, boxShadow: 5, borderRadius: 3 }}>
                 <Typography sx={{ textAlign: 'center', fontWeight: 'bold', fontSize: '20px', mb: 2, color: '#ba343b' }}>
-                    User Profile
+                    Employee Profile
                 </Typography>
                 <Box display="flex" flexDirection="column" alignItems="center">
                     <Avatar
