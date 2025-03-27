@@ -54,20 +54,33 @@ const AllFolders = () => {
     const toggleFolderStar = async (entityId) => {
         try {
             const isStarred = starredFolders.some(folder => folder.entityId === entityId);
-            const updatedStarredFolders = isStarred
-                ? starredFolders.filter(folder => folder.entityId !== entityId)
-                : [...starredFolders, { entityId }];
-            setStarredFolders(updatedStarredFolders);
-            await axiosInstance.post("/planotech-inhouse/add/favorite", {
-                entityId: entityId,
-                type: "folder"
-            }, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                }
-            });
+            let updatedStarredFolders = [];
 
+            if (isStarred) {
+                updatedStarredFolders = starredFolders.filter(folder => folder.entityId !== entityId);
+                await axiosInstance.get(`/planotech-inhouse/unstar/favorites`, {
+                    params: {
+                        id: entityId,
+                        type: "folder"
+                    },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+            } else {
+                updatedStarredFolders = [...starredFolders, { entityId }];
+                await axiosInstance.post("/planotech-inhouse/add/favorite", {
+                    entityId: entityId,
+                    type: "folder"
+                }, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+            }
+            setStarredFolders(updatedStarredFolders);
         } catch (error) {
             console.error("Error toggling star:", error);
         }
@@ -76,24 +89,36 @@ const AllFolders = () => {
     const toggleFileStar = async (id) => {
         try {
             const isStarred = starredFiles.some(file => file.id === id);
-            const updatedStarredFiles = isStarred
-                ? starredFiles.filter(file => file.id !== id)
-                : [...starredFiles, { id }];
-            setStarredFiles(updatedStarredFiles);
-            await axiosInstance.post("/planotech-inhouse/add/favorite", {
-                entityId: id,
-                type: "file"
-            }, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                }
-            });
+            let updatedStarredFiles = [];
 
+            if (isStarred) {
+                // Unstar logic
+                updatedStarredFiles = starredFiles.filter(file => file.id !== id);
+                await axiosInstance.get(`/planotech-inhouse/unstar/favorites`, {
+                    params: { id, type: "file" },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+            } else {
+                // Star logic
+                updatedStarredFiles = [...starredFiles, { id }];
+                await axiosInstance.post("/planotech-inhouse/add/favorite", {
+                    entityId: id,
+                    type: "file"
+                }, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+            }
+            setStarredFiles(updatedStarredFiles);
         } catch (error) {
             console.error("Error toggling star:", error);
         }
-    }
+    };
 
     useEffect(() => {
         const fetchStarredFoldersandFiles = async () => {
@@ -285,15 +310,15 @@ const AllFolders = () => {
         if (fileName.endsWith('.pdf')) {
             return <PictureAsPdfIcon sx={{ color: '#de2429' }} />;
         } else if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
-            return <DescriptionIcon sx={{ color: '#2B579A' }} />; 
+            return <DescriptionIcon sx={{ color: '#2B579A' }} />;
         } else if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
-            return <TableChartIcon sx={{ color: '#217346' }} />; 
+            return <TableChartIcon sx={{ color: '#217346' }} />;
         } else if (fileName.endsWith('.csv')) {
-            return <InsertChartIcon sx={{ color: '#217346' }} />; 
+            return <InsertChartIcon sx={{ color: '#217346' }} />;
         } else if (fileName.endsWith('.zip') || fileName.endsWith('.rar')) {
-            return <FolderZipIcon sx={{ color: '#f0a500' }} />; 
-        } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')|| fileName.endsWith('.PNG') || fileName.endsWith('.gif') || fileName.endsWith('.svg')) {
-            return <ImageIcon sx={{ color: '#098dc6' }} />; 
+            return <FolderZipIcon sx={{ color: '#f0a500' }} />;
+        } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || fileName.endsWith('.PNG') || fileName.endsWith('.gif') || fileName.endsWith('.svg')) {
+            return <ImageIcon sx={{ color: '#098dc6' }} />;
         } else {
             return <InsertDriveFileIcon sx={{ color: '#f8d775' }} />;
         }
