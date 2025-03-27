@@ -79,6 +79,44 @@ const Starred = () => {
         }
     };
 
+    const handleFolderUnstar = async (entityId) => {
+        try {
+            const updatedStarredFolders = starredFolders.filter(folder => folder.entityId !== entityId);
+            setStarredFolders(updatedStarredFolders);
+
+            await axiosInstance.get(`/planotech-inhouse/unstar/favorites`, {
+                params: {
+                    id: entityId,
+                    type: "folder"
+                },
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            });
+        } catch (error) {
+            console.error("Error unstarring folder:", error);
+        }
+    };
+
+    const handleFileUnstar = async (id) => {
+        try {
+            const updatedStarredFiles = starredFiles.filter(file => file.id !== id);
+            setStarredFiles(updatedStarredFiles);
+
+            await axiosInstance.get(`/planotech-inhouse/unstar/favorites`, {
+                params: {
+                    id: id,
+                    type: "file"
+                },
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                }
+            });
+        } catch (error) {
+            console.error("Error unstarring folder:", error);
+        }
+    }
+
     const getFileIcon = (fileName) => {
         if (fileName.endsWith('.pdf')) {
             return <PictureAsPdfIcon sx={{ color: '#de2429' }} />;
@@ -90,8 +128,8 @@ const Starred = () => {
             return <InsertChartIcon sx={{ color: '#217346' }} />;
         } else if (fileName.endsWith('.zip') || fileName.endsWith('.rar')) {
             return <FolderZipIcon sx={{ color: '#f0a500' }} />;
-        } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png')|| fileName.endsWith('.PNG') || fileName.endsWith('.gif') || fileName.endsWith('.svg')) {
-            return <ImageIcon sx={{ color: '#098dc6' }} />; 
+        } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || fileName.endsWith('.PNG') || fileName.endsWith('.gif') || fileName.endsWith('.svg')) {
+            return <ImageIcon sx={{ color: '#098dc6' }} />;
         } else {
             return <InsertDriveFileIcon sx={{ color: '#f8d775' }} />;
         }
@@ -175,7 +213,13 @@ const Starred = () => {
                                             <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
                                                 {folder.createdBy ? folder.createdBy : "N/A"}
                                             </Typography>
-                                            <Star sx={{ color: "gold" }} />
+                                            <Star
+                                                sx={{ color: "gold", cursor: "pointer" }}
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    handleFolderUnstar(folder.entityId);
+                                                }}
+                                            />
                                         </ListItem>
                                     ))}
                                 </List>
@@ -349,7 +393,13 @@ const Starred = () => {
                                     <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
                                         {Math.round(file.fileSize / 1024)} KB
                                     </Typography>
-                                    <Star sx={{ color: "gold" }} />
+                                    <Star
+                                        sx={{ color: "gold", cursor: "pointer" }}
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            handleFileUnstar(file.id);
+                                        }}
+                                    />
                                 </ListItem>
                             ))}
                         </List>
