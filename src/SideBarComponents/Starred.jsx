@@ -283,7 +283,7 @@ const Starred = () => {
                                                 }
                                             }}
                                         >
-                                            <Box sx={{ display: "flex", alignItems: "center" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                                 {getFileIcon(file.fileName)}
                                                 <Typography
                                                     variant="body1"

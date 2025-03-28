@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
-import { Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton } from "@mui/material";
+import { LinearProgress, Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton, Menu, MenuItem } from "@mui/material";
 import { Search, ViewList, GridView, Folder as FolderIcon, UploadFile, Star, StarBorder } from "@mui/icons-material";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
 import axiosInstance from "../Helper/AxiosInstance";
@@ -33,6 +33,15 @@ const AllFolders = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [starredFolders, setStarredFolders] = useState([]);
     const [starredFiles, setStarredFiles] = useState([]);
+    const [anchorEl, setAnchorEl] = useState(null);
+
+    const handleClick = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleUploadClose = () => {
+        setAnchorEl(null);
+    }
 
     const decryptToken = (encryptedToken) => {
         try {
@@ -232,80 +241,99 @@ const AllFolders = () => {
         }
     }, [openFolder]);
 
+    const [uploading, setUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState("");
+    const [uploadOpen, setUploadOpen] = useState(false);
+
+    const MAX_SMALL_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+    const MAX_LARGE_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
+    
+    const handleFileValidation = (files, maxSize) => {
+        let validFiles = [];
+        let totalSize = 0;
+    
+        for (let file of files) {
+            if (file.size > maxSize) {
+                setUploadStatus(`❌ File "${file.name}" exceeds ${(maxSize / (1024 * 1024)).toFixed(0)}MB limit and can't be uploaded.`);
+                setUploading(false);
+                setTimeout(() => setUploadOpen(false), 8000);
+                return []; // Stop execution immediately
+            }
+    
+            if (totalSize + file.size > maxSize) {
+                setUploadStatus(`⚠️ Total file size exceeds ${(maxSize / (1024 * 1024)).toFixed(0)}MB. Removing the last file.`);
+                setTimeout(() => setUploadOpen(false), 8000);
+                break; // Stop adding more files
+            }
+    
+            validFiles.push(file);
+            totalSize += file.size;
+        }
+    
+        return validFiles;
+    };
+    
+    // ✅ Small File Upload (≤100MB)
     const handleFileUpload = async (event, entityId) => {
-        const files = event.target.files[0];
-        if (!files) return;
-
-        const formData = new FormData();
-        formData.append("files", files);
-
-        const toastId = toast.loading("Uploading file...");
-
-        try {
-            const response = await axiosInstance.post(`/planotech-inhouse/uploadFile?folderId=${entityId}`, formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            console.log("File uploaded successfully:", response.data);
-            toast.update(toastId, {
-                render: "File uploaded successfully",
-                type: "success",
-                isLoading: false,
-                autoClose: 3000,
-            });
-
-            fetchFiles(entityId);
-        } catch (error) {
-            console.error("Error uploading file:", error);
-            toast.update(toastId, {
-                render: "Error uploading file",
-                type: "error",
-                isLoading: false,
-                autoClose: 3000,
-            });
-        }
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+    
+        setUploading(true);
+        setUploadOpen(true);
+        setUploadStatus("Checking file size...");
+    
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Ensure UI updates
+    
+        let validFiles = handleFileValidation([...files], MAX_SMALL_FILE_SIZE);
+        if (validFiles.length === 0) return;
+    
+        await uploadFiles(validFiles, entityId, "/planotech-inhouse/uploadFile");
     };
-
+    
+    // ✅ Large File Upload (≤1GB)
     const handleLargeFileUpload = async (event, entityId) => {
-        const files = event.target.files[0];
-        if (!files) return;
-
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+    
+        setUploading(true);
+        setUploadOpen(true);
+        setUploadStatus("Checking file size...");
+    
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Ensure UI updates
+    
+        let validFiles = handleFileValidation([...files], MAX_LARGE_FILE_SIZE);
+        if (validFiles.length === 0) return;
+    
+        await uploadFiles(validFiles, entityId, "/planotech-inhouse/upload/largeFile");
+    };
+    
+    // ✅ Reusable Upload Function
+    const uploadFiles = async (validFiles, entityId, endpoint) => {
+        setUploadStatus("Uploading files...");
+    
         const formData = new FormData();
-        formData.append("files", files);
-
-        const toastId = toast.loading("Uploading file...");
-
+        validFiles.forEach(file => formData.append("files", file));
+    
         try {
-            const response = await axiosInstance.post(`/planotech-inhouse/upload/largeFile?folderId=${entityId}`, formData, {
+            const response = await axiosInstance.post(`${endpoint}?folderId=${entityId}`, formData, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                     Authorization: `Bearer ${token}`,
                 },
             });
-
-            console.log("File uploaded successfully:", response.data);
-            toast.update(toastId, {
-                render: "File uploaded successfully",
-                type: "success",
-                isLoading: false,
-                autoClose: 3000,
-            });
-
+    
+            console.log("Files uploaded successfully:", response.data);
+            setUploadStatus("✅ Files uploaded successfully!");
             fetchFiles(entityId);
         } catch (error) {
-            console.error("Error uploading file:", error);
-            toast.update(toastId, {
-                render: "Error uploading file",
-                type: "error",
-                isLoading: false,
-                autoClose: 3000,
-            });
+            console.error("Error uploading files:", error);
+            setUploadStatus("❌ Error uploading files.");
+        } finally {
+            setUploading(false);
+            setTimeout(() => setUploadOpen(false), 3000);
         }
     };
-
+        
     const getFileIcon = (fileName) => {
         if (fileName.endsWith('.pdf')) {
             return <PictureAsPdfIcon sx={{ color: '#de2429' }} />;
@@ -371,31 +399,45 @@ const AllFolders = () => {
                                 <Button
                                     variant="outlined"
                                     startIcon={<UploadFile />}
-                                    component="label"
-                                    sx={{ fontWeight: "bold", mr: 1 }}
-                                >
-                                    Upload Files
-                                    <Input
-                                        type="file"
-                                        sx={{ display: "none" }}
-                                        hidden
-                                        onChange={(e) => handleFileUpload(e, openFolder)}
-                                    />
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    startIcon={<UploadFile />}
-                                    component="label"
+                                    onClick={handleClick}
                                     sx={{ fontWeight: "bold" }}
                                 >
-                                    Upload Large Files
-                                    <Input
-                                        type="file"
-                                        sx={{ display: "none" }}
-                                        hidden
-                                        onChange={(e) => handleLargeFileUpload(e, openFolder)}
-                                    />
+                                    Upload Files
                                 </Button>
+                                <Menu
+                                    anchorEl={anchorEl}
+                                    open={Boolean(anchorEl)}
+                                    onClose={handleUploadClose}
+                                >
+                                    <MenuItem>
+                                        <label style={{ fontWeight: "bold", color: "grey", fontSize: "14px" }}>
+                                            Small File (≤100mb)
+                                            <Input
+                                                type="file"
+                                                sx={{ display: "none" }}
+                                                inputProps={{ multiple: true }}
+                                                onChange={(e) => {
+                                                    handleFileUpload(e, openFolder, MAX_SMALL_FILE_SIZE, "uploadFile");
+                                                    handleUploadClose();
+                                                }}
+                                            />
+                                        </label>
+                                    </MenuItem>
+                                    <MenuItem>
+                                        <label style={{ fontWeight: "bold", color: "grey", fontSize: "14px" }}>
+                                            Large File (≤1gb)
+                                            <Input
+                                                type="file"
+                                                sx={{ display: "none" }}
+                                                inputProps={{ multiple: true }}
+                                                onChange={(e) => {
+                                                    handleLargeFileUpload(e, openFolder, MAX_LARGE_FILE_SIZE, "largeFile");
+                                                    handleUploadClose();
+                                                }}
+                                            />
+                                        </label>
+                                    </MenuItem>
+                                </Menu>
                             </Box>
                         </Box>
 
@@ -713,6 +755,25 @@ const AllFolders = () => {
                             Create
                         </Button>
                     </DialogActions>
+                </Dialog>
+
+                <Dialog
+                    open={uploadOpen}
+                    onClose={() => setUploadOpen(false)}
+                    fullWidth
+                    maxWidth="sm"
+                    sx={{ "& .MuiDialog-paper": { width: "450px" } }}
+                >
+                    <DialogContent sx={{ textAlign: "center", p: 3 }}>
+                        <Typography
+                            variant="h6"
+                            gutterBottom
+                            sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                        >
+                            {uploading ? "Uploading File....." : uploadStatus}
+                        </Typography>
+                        {uploading && <LinearProgress sx={{ mt: 3 }} />}
+                    </DialogContent>
                 </Dialog>
             </Box>
             <ToastContainer />
