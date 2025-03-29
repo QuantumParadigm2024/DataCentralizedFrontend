@@ -247,73 +247,73 @@ const AllFolders = () => {
 
     const MAX_SMALL_FILE_SIZE = 100 * 1024 * 1024; // 100MB
     const MAX_LARGE_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
-    
+
     const handleFileValidation = (files, maxSize) => {
         let validFiles = [];
         let totalSize = 0;
-    
+
         for (let file of files) {
             if (file.size > maxSize) {
-                setUploadStatus(`❌ File "${file.name}" exceeds ${(maxSize / (1024 * 1024)).toFixed(0)}MB limit and can't be uploaded.`);
+                setUploadStatus(`❌ File "${file.name}" exceeds ${(maxSize / (1024 * 1024)).toFixed(0)}MB limit and can't be uploaded. Choose large file option`);
                 setUploading(false);
                 setTimeout(() => setUploadOpen(false), 8000);
                 return []; // Stop execution immediately
             }
-    
+
             if (totalSize + file.size > maxSize) {
                 setUploadStatus(`⚠️ Total file size exceeds ${(maxSize / (1024 * 1024)).toFixed(0)}MB. Removing the last file.`);
                 setTimeout(() => setUploadOpen(false), 8000);
                 break; // Stop adding more files
             }
-    
+
             validFiles.push(file);
             totalSize += file.size;
         }
-    
+
         return validFiles;
     };
-    
+
     // ✅ Small File Upload (≤100MB)
     const handleFileUpload = async (event, entityId) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
-    
+
         setUploading(true);
         setUploadOpen(true);
         setUploadStatus("Checking file size...");
-    
+
         await new Promise((resolve) => setTimeout(resolve, 500)); // Ensure UI updates
-    
+
         let validFiles = handleFileValidation([...files], MAX_SMALL_FILE_SIZE);
         if (validFiles.length === 0) return;
-    
+
         await uploadFiles(validFiles, entityId, "/planotech-inhouse/uploadFile");
     };
-    
+
     // ✅ Large File Upload (≤1GB)
     const handleLargeFileUpload = async (event, entityId) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
-    
+
         setUploading(true);
         setUploadOpen(true);
         setUploadStatus("Checking file size...");
-    
+
         await new Promise((resolve) => setTimeout(resolve, 500)); // Ensure UI updates
-    
+
         let validFiles = handleFileValidation([...files], MAX_LARGE_FILE_SIZE);
         if (validFiles.length === 0) return;
-    
+
         await uploadFiles(validFiles, entityId, "/planotech-inhouse/upload/largeFile");
     };
-    
+
     // ✅ Reusable Upload Function
     const uploadFiles = async (validFiles, entityId, endpoint) => {
         setUploadStatus("Uploading files...");
-    
+
         const formData = new FormData();
         validFiles.forEach(file => formData.append("files", file));
-    
+
         try {
             const response = await axiosInstance.post(`${endpoint}?folderId=${entityId}`, formData, {
                 headers: {
@@ -321,7 +321,7 @@ const AllFolders = () => {
                     Authorization: `Bearer ${token}`,
                 },
             });
-    
+
             console.log("Files uploaded successfully:", response.data);
             setUploadStatus("✅ Files uploaded successfully!");
             fetchFiles(entityId);
@@ -333,7 +333,7 @@ const AllFolders = () => {
             setTimeout(() => setUploadOpen(false), 3000);
         }
     };
-        
+
     const getFileIcon = (fileName) => {
         if (fileName.endsWith('.pdf')) {
             return <PictureAsPdfIcon sx={{ color: '#de2429' }} />;
@@ -380,7 +380,13 @@ const AllFolders = () => {
                         </Grid>
                         {!openFolder && (
                             <Grid item xs={12} sm="auto" sx={{ mt: { xs: 1, sm: 0 } }}>
-                                <Button variant="contained" startIcon={<CreateNewFolderIcon />} onClick={handleOpen}>
+                                <Button startIcon={<CreateNewFolderIcon />} onClick={handleOpen}
+                                    sx={{
+                                        fontWeight: "bold",
+                                        bgcolor: '#ba343b',
+                                        '&:hover': { bgcolor: '#9e2b31' },
+                                        color: 'white',
+                                    }}>
                                     Create Folder
                                 </Button>
                             </Grid>
@@ -400,7 +406,11 @@ const AllFolders = () => {
                                     variant="outlined"
                                     startIcon={<UploadFile />}
                                     onClick={handleClick}
-                                    sx={{ fontWeight: "bold" }}
+                                    sx={{
+                                        fontWeight: "bold",
+                                        color: "#ba343b",
+                                        border: "0.5px solid #ba343b",
+                                    }}
                                 >
                                     Upload Files
                                 </Button>
@@ -455,7 +465,7 @@ const AllFolders = () => {
                                 <Box sx={{ width: '100%' }}>
                                     <Box sx={{
                                         display: 'grid',
-                                        gridTemplateColumns: '1.5fr 1.5fr 1.5fr 0.5fr 0.5fr',
+                                        gridTemplateColumns: '2.5fr 2.5fr 1.5fr 1.5fr 1fr',
                                         fontWeight: 'bold',
                                         bgcolor: '#f5f5f5',
                                         p: 1,
@@ -465,7 +475,7 @@ const AllFolders = () => {
                                         <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Size</Typography>
-                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Add Favourites</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
                                     </Box>
                                     <List>
@@ -474,7 +484,7 @@ const AllFolders = () => {
                                                 key={index}
                                                 sx={{
                                                     display: 'grid',
-                                                    gridTemplateColumns: '1.5fr 1.5fr 1.5fr 0.5fr 0.5fr',
+                                                    gridTemplateColumns: '2.5fr 2.5fr 1.5fr 1.5fr 1fr',
                                                     alignItems: 'center',
                                                     p: 1.5,
                                                     borderBottom: '1px solid #ddd',
@@ -483,7 +493,12 @@ const AllFolders = () => {
                                                     "&:hover": { bgcolor: "#f9f9f9" }
                                                 }}
                                                 onClick={() => {
+                                                    const imageExtensions = ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "webp"];
+                                                    const fileExtension = file.fileName.split('.').pop().toLowerCase();
+
                                                     if (file.type === "application/pdf") {
+                                                        window.open(file.fileLink, '_blank');
+                                                    } else if (imageExtensions.includes(fileExtension)) {
                                                         window.open(file.fileLink, '_blank');
                                                     } else {
                                                         const link = document.createElement('a');
@@ -534,7 +549,12 @@ const AllFolders = () => {
                                                     </IconButton>
                                                 </Tooltip>
                                                 <Tooltip title="Admin access only, employees restricted" arrow>
-                                                    <IconButton sx={{ color: "gray", mr: 4 }}>
+                                                    <IconButton
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                        }}
+                                                        sx={{ color: "gray", mr: 7 }}
+                                                    >
                                                         <DeleteIcon />
                                                     </IconButton>
                                                 </Tooltip>
@@ -589,7 +609,7 @@ const AllFolders = () => {
                             <Box sx={{ width: '100%', mt: 2 }}>
                                 <Box sx={{
                                     display: 'grid',
-                                    gridTemplateColumns: '1.5fr 1.5fr 1.5fr 0.5fr 0.5fr',
+                                    gridTemplateColumns: '2.5fr 2.5fr 1.5fr 1.5fr 1fr',
                                     fontWeight: 'bold',
                                     bgcolor: '#f5f5f5',
                                     p: 1,
@@ -599,7 +619,7 @@ const AllFolders = () => {
                                     <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Add Favourites</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
                                 </Box>
                                 <List>
@@ -608,7 +628,7 @@ const AllFolders = () => {
                                             key={folder.entityId}
                                             sx={{
                                                 display: 'grid',
-                                                gridTemplateColumns: '1.5fr 1.5fr 1.5fr 0.5fr 0.5fr',
+                                                gridTemplateColumns: '2.5fr 2.5fr 1.5fr 1.5fr 1fr',
                                                 alignItems: 'center',
                                                 p: 1.5,
                                                 borderBottom: '1px solid #ddd',
@@ -658,7 +678,12 @@ const AllFolders = () => {
                                                 </IconButton>
                                             </Tooltip>
                                             <Tooltip title="Admin access only, employees restricted" arrow>
-                                                <IconButton sx={{ color: "gray", mr: 5 }}>
+                                                <IconButton
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                    }}
+                                                    sx={{ color: "gray", mr: 7 }}
+                                                >
                                                     <DeleteIcon />
                                                 </IconButton>
                                             </Tooltip>
@@ -750,7 +775,7 @@ const AllFolders = () => {
                         <Button
                             onClick={handleCreateFolder}
                             variant="outlined"
-                            sx={{ borderRadius: "16px", fontWeight: "bold" }}
+                            sx={{ borderRadius: "16px", fontWeight: "bold", color: "#ba343b", border: "0.5px solid #ba343b" }}
                         >
                             Create
                         </Button>

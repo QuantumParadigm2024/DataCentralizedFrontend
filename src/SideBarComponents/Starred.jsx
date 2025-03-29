@@ -271,7 +271,12 @@ const Starred = () => {
                                                 "&:hover": { bgcolor: "#f9f9f9" }
                                             }}
                                             onClick={() => {
+                                                const imageExtensions = ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "webp"];
+                                                const fileExtension = file.fileName.split('.').pop().toLowerCase();
+
                                                 if (file.type === "application/pdf") {
+                                                    window.open(file.fileLink, '_blank');
+                                                } else if (imageExtensions.includes(fileExtension)) {
                                                     window.open(file.fileLink, '_blank');
                                                 } else {
                                                     const link = document.createElement('a');
@@ -357,7 +362,12 @@ const Starred = () => {
                                         "&:hover": { bgcolor: "#f9f9f9" }
                                     }}
                                     onClick={() => {
+                                        const imageExtensions = ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "webp"];
+                                        const fileExtension = file.fileName.split('.').pop().toLowerCase();
+
                                         if (file.type === "application/pdf") {
+                                            window.open(file.fileLink, '_blank');
+                                        } else if (imageExtensions.includes(fileExtension)) {
                                             window.open(file.fileLink, '_blank');
                                         } else {
                                             const link = document.createElement('a');
