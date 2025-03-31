@@ -15,13 +15,13 @@ import {
   Button,
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
-import axiosInstance from "../Helper/AxiosInstance";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
 import CryptoJS from "crypto-js";
 import { secretKey } from "../Helper/SecretKey";
+import axiosInstance from "../Helper/AxiosInstance";
 
-const DataTable = ({ data: propData, refreshData, searchTerm }) => {
+const DataTable = ({ data, refreshData, searchTerm, category }) => {
   const [localData, setLocalData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [error, setError] = useState(null);
@@ -34,23 +34,24 @@ const DataTable = ({ data: propData, refreshData, searchTerm }) => {
   const [expandedRows, setExpandedRows] = useState({});
 
   useEffect(() => {
-    setLocalData(propData);
-  }, [propData]);
+    if (Array.isArray(data)) {
+      setLocalData(data);
+    } else {
+      setLocalData([]);
+    }
+  }, [data]);
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
-      setFilteredData(localData);
+      if (category) {
+        fetchCategoryData();
+      } else {
+        fetchData();
+      }
     } else {
-      const lowercasedSearchTerm = searchTerm.toLowerCase();
-      const filtered = localData.filter((row) =>
-        Object.values(row).some(
-          (value) =>
-            value && value.toString().toLowerCase().includes(lowercasedSearchTerm)
-        )
-      );
-      setFilteredData(filtered);
+      fetchSearchData();
     }
-  }, [searchTerm, localData]);
+  }, [searchTerm, category]);
 
   const decryptToken = (encryptedToken) => {
     try {
@@ -77,26 +78,31 @@ const DataTable = ({ data: propData, refreshData, searchTerm }) => {
 
   useEffect(() => {
     if (refreshData) {
-      fetchData();
+      if (category) {
+        fetchCategoryData();
+      } else {
+        fetchData();
+      }
     }
-  }, [refreshData]);
+  }, [refreshData, category]);
 
   const fetchData = async (newPageNo = pageNo) => {
     setLoading(true);
     setError(null);
 
     try {
+      const params = {
+        pageNo: newPageNo,
+        pageSize: pageSize,
+      };
+
       const response = await axiosInstance.get("planotech-inhouse/getAll/data", {
-        params: {
-          pageNo: newPageNo,
-          pageSize: pageSize,
-        },
+        params: params,
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      console.log("API Response:", response.data);
       if (Array.isArray(response.data)) {
         setLocalData(response.data);
         setFilteredData(response.data);
@@ -107,13 +113,83 @@ const DataTable = ({ data: propData, refreshData, searchTerm }) => {
         const fetchedData = arrayKey ? response.data[arrayKey] : [];
         setLocalData(fetchedData);
         setFilteredData(fetchedData);
-        setTotalPages(
-          response.data.totalPages || Math.ceil(fetchedData.length / pageSize)
-        );
       }
+      setTotalPages(response.data.totalPages || 0);
       setPageNo(newPageNo);
     } catch (err) {
       setError(err.message || "Something went wrong!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCategoryData = async (newPageNo = pageNo) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = {
+        pageNo: newPageNo,
+        pageSize: pageSize,
+      };
+
+      const response = await axiosInstance.get(
+        `/planotech-inhouse/get/data/${category}`,
+        {
+          params: params,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (Array.isArray(response.data.content)) {
+        setLocalData(response.data.content);
+        setFilteredData(response.data.content);
+        setTotalPages(response.data.totalPages || 0);
+        setPageNo(newPageNo);
+      } else {
+        setLocalData([]);
+        setFilteredData([]);
+        setTotalPages(0);
+        setPageNo(0);
+      }
+    } catch (err) {
+      setError(err.message || "Something went wrong!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSearchData = async (newPageNo = pageNo) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = {
+        searchText: searchTerm,
+        pageNo: newPageNo,
+        pageSize: pageSize,
+      };
+
+      const response = await axiosInstance.get(`planotech-inhouse/search`, {
+        params: params,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (Array.isArray(response.data)) {
+        setFilteredData(response.data);
+      } else {
+        const arrayKey = Object.keys(response.data).find((key) =>
+          Array.isArray(response.data[key])
+        );
+        setFilteredData(arrayKey ? response.data[arrayKey] : []);
+      }
+      setTotalPages(response.data.totalPages || 0);
+      setPageNo(newPageNo);
+    } catch (err) {
+      setError(err.message || "Something went wrong!");
+      setFilteredData([]);
     } finally {
       setLoading(false);
     }
@@ -132,15 +208,43 @@ const DataTable = ({ data: propData, refreshData, searchTerm }) => {
   const open = Boolean(anchorEl);
 
   const handleNextPage = () => {
-    if (pageNo < totalPages - 1) fetchData(pageNo + 1);
+    if (pageNo < totalPages - 1) {
+      if (searchTerm.trim() === "") {
+        if (category) {
+          fetchCategoryData(pageNo + 1);
+        } else {
+          fetchData(pageNo + 1);
+        }
+      } else {
+        fetchSearchData(pageNo + 1);
+      }
+    }
   };
 
   const handlePrevPage = () => {
-    if (pageNo > 0) fetchData(pageNo - 1);
+    if (pageNo > 0) {
+      if (searchTerm.trim() === "") {
+        if (category) {
+          fetchCategoryData(pageNo - 1);
+        } else {
+          fetchData(pageNo - 1);
+        }
+      } else {
+        fetchSearchData(pageNo - 1);
+      }
+    }
   };
 
   const handlePageClick = (page) => {
-    fetchData(page);
+    if (searchTerm.trim() === "") {
+      if (category) {
+        fetchCategoryData(page);
+      } else {
+        fetchData(page);
+      }
+    } else {
+      fetchSearchData(page);
+    }
   };
 
   const renderPagination = () => {
@@ -212,7 +316,7 @@ const DataTable = ({ data: propData, refreshData, searchTerm }) => {
           <Typography color="error" sx={{ padding: 1, fontSize: "0.9rem" }}>
             {error}
           </Typography>
-        ) : filteredData.length === 0 ? (
+        ) : !Array.isArray(filteredData) || filteredData.length === 0 ? (
           <Typography sx={{ padding: 1, fontSize: "0.9rem" }}>
             No data available
           </Typography>
@@ -246,7 +350,8 @@ const DataTable = ({ data: propData, refreshData, searchTerm }) => {
                   <TableCell>{index + 1 + pageNo * pageSize}</TableCell>
                   <TableCell>{row.name}</TableCell>
                   <TableCell>
-                    <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${row.email}`}
+                    <a
+                      href={`https://mail.google.com/mail/?view=cm&fs=1&to=${row.email}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
