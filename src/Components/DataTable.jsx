@@ -1,20 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
-import {
-  CircularProgress,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-  IconButton,
-  Popover,
-  Button,
-} from "@mui/material";
+import {CircularProgress,Paper,Table,TableBody,TableCell,TableContainer,TableHead,TableRow,Typography,IconButton,Popover,Button} from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import ArrowBackIosIcon from "@mui/icons-material/ArrowBackIos";
@@ -77,16 +64,6 @@ const DataTable = ({ data, refreshData, searchTerm, category }) => {
     return words.length > 2 ? words.slice(0, 2).join(" ") + " ..." : text;
   };
 
-  useEffect(() => {
-    if (refreshData) {
-      if (category) {
-        fetchCategoryData();
-      } else {
-        fetchData();
-      }
-    }
-  }, [refreshData, category]);
-
   const fetchData = async (newPageNo = pageNo) => {
     setLoading(true);
     setError(null);
@@ -138,6 +115,7 @@ const DataTable = ({ data, refreshData, searchTerm, category }) => {
         `/planotech-inhouse/get/data/${category}`,
         {
           params: params,
+          category: category,
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -300,6 +278,21 @@ const DataTable = ({ data, refreshData, searchTerm, category }) => {
     );
   };
 
+  const highlightSearch = (text, searchTerm) => {
+    if (!text) return text;
+    if (!searchTerm.trim()) return text;
+    const regex = new RegExp(`(${searchTerm})`, "gi");
+    return text.split(regex).map((part, index) =>
+      regex.test(part) ? (
+        <span key={index} style={{ backgroundColor: "yellow" }}>
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  };
+
   return (
     <Paper
       sx={{
@@ -349,30 +342,30 @@ const DataTable = ({ data, refreshData, searchTerm, category }) => {
               {filteredData.map((row, index) => (
                 <TableRow key={row.id} sx={{ "& td": { height: "30px", fontSize: "0.8rem" } }}>
                   <TableCell>{index + 1 + pageNo * pageSize}</TableCell>
-                  <TableCell>{row.name}</TableCell>
+                  <TableCell>{highlightSearch(row.name, searchTerm)}</TableCell>
                   <TableCell>
                     <a
                       href={`https://mail.google.com/mail/?view=cm&fs=1&to=${row.email}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {row.email}
+                      {highlightSearch(row.email, searchTerm)}
                     </a>
                   </TableCell>
                   <TableCell>
                     {/^([6-9])\d{9}$/.test(row.phoneNumber) &&
-                    row.phoneNumber.length === 10
+                      row.phoneNumber.length === 10
                       ? `+91${row.phoneNumber}`
                       : "Wrong Number"}
                   </TableCell>
                   <TableCell onClick={() => handleRowClick(row.id)}>
-                    {truncateText(row.designation, expandedRows[row.id])}
+                    {highlightSearch(truncateText(row.designation, expandedRows[row.id]), searchTerm)}
                   </TableCell>
-                  <TableCell>{row.address}</TableCell>
+                  <TableCell>{highlightSearch(row.address, searchTerm)}</TableCell>
                   <TableCell onClick={() => handleRowClick(row.id)}>
-                    {truncateText(row.companyName, expandedRows[row.id])}
+                    {highlightSearch(truncateText(row.companyName, expandedRows[row.id]), searchTerm)}
                   </TableCell>
-                  <TableCell>{row.industryType}</TableCell>
+                  <TableCell>{highlightSearch(row.industryType, searchTerm)}</TableCell>
                   <TableCell>
                     <IconButton
                       size="small"
