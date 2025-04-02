@@ -17,8 +17,6 @@ import {
     IconButton,
 } from "@mui/material";
 import { Search, UploadFile, CloseRounded } from "@mui/icons-material";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import axiosInstance from "../Helper/AxiosInstance";
 import DataTable from "../Components/DataTable";
 import CryptoJS from "crypto-js";
@@ -27,7 +25,7 @@ import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
 import demo from "../Assets/ColumnNaame.jpg";
 
 const AllFiles = () => {
-    const [chooseCategory, setChoosecategory] = useState("");
+    const [chooseCategory, setChoosecategory] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [refreshData, setRefreshData] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -35,41 +33,10 @@ const AllFiles = () => {
     const fileInputRef = useRef(null);
     const [openUploadDialog, setOpenUploadDialog] = useState(false);
     const [tableData, setTableData] = useState([]);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            if (chooseCategory) {
-                try {
-                    console.log(chooseCategory + "choosed");
-
-                    const response = await axiosInstance.get(
-                        `/planotech-inhouse/get/data/${chooseCategory}`,
-                        {
-                            headers: {
-                                Authorization: `Bearer ${decryptToken(
-                                    sessionStorage.getItem("dc")
-                                )}`,
-                            },
-                        }
-                    );
-                    console.log(response.data.content);
-
-                    setTableData(response.data.content);
-                } catch (error) {
-                    console.error("Error fetching data:", error);
-                    toast.error("Failed to fetch data.");
-                    setTableData([]);
-                }
-            } else {
-                setTableData([]);
-            }
-        };
-        fetchData();
-    }, [chooseCategory, refreshData]);
-
-    useEffect(() => {
-        setRefreshData((prev) => !prev);
-    }, [chooseCategory]);
+    const [success, setSuccess] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
+    const [errorMessage, setErrorMessage] = useState("");
+    const [error, setError] = useState(false);
 
     const decryptToken = (encryptedToken) => {
         try {
@@ -94,7 +61,8 @@ const AllFiles = () => {
 
     const handleUploadButtonClick = () => {
         if (!chooseCategory) {
-            toast.error("Please select a category first.");
+            setErrorMessage("Please select a category first.");
+            setError(true);
             return;
         }
         fileInputRef.current.click();
@@ -110,7 +78,8 @@ const AllFiles = () => {
         });
 
         if (allowedFiles.length === 0) {
-            toast.error("Please select only CSV or Excel files.");
+            setErrorMessage("Please select only CSV or Excel files.");
+            setError(true);
             return;
         }
 
@@ -119,11 +88,13 @@ const AllFiles = () => {
 
     const handleSendFiles = async () => {
         if (!chooseCategory) {
-            toast.error("Please select a category before uploading.");
+            setErrorMessage("Please select a category before uploading.");
+            setError(true);
             return;
         }
         if (selectedFiles.length === 0) {
-            toast.error("Please select files to upload.");
+            setErrorMessage("Please select files to upload.");
+            setError(true);
             return;
         }
 
@@ -140,14 +111,16 @@ const AllFiles = () => {
                 },
             });
 
-            toast.success("Files uploaded successfully!");
+            setSuccessMessage("Files uploaded successfully!");
+            setSuccess(true);
             setOpenUploadDialog(false);
             setSelectedFiles([]);
             setChoosecategory("");
             setRefreshData((prev) => !prev);
         } catch (error) {
             console.error("Upload failed:", error);
-            toast.error("File upload failed. Please try again.");
+            setErrorMessage("File upload failed. Please try again.");
+            setError(true);
         }
     };
 
@@ -160,7 +133,6 @@ const AllFiles = () => {
 
     return (
         <Box sx={{ width: "100%", height: "100%" }}>
-            <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
             <Box
                 ref={headerRef}
                 sx={{
@@ -172,8 +144,8 @@ const AllFiles = () => {
                     borderRadius: "8px",
                 }}
             >
-                <Grid container alignItems="center" justifyContent="space-between">
-                    <Grid item xs={10} sm={8} md={6}>
+                <Grid container alignItems="center" justifyContent="space-between" spacing={2}>
+                    <Grid item xs={12} sm={6} md={6}>
                         <TextField
                             variant="outlined"
                             size="small"
@@ -187,16 +159,8 @@ const AllFiles = () => {
                             }}
                         />
                     </Grid>
-                    <Box sx={{
-                        boxShadow: 1,
-                        width: "20%",
-                        ml: "15%",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                    }}
-                    >
-                        <FormControl fullWidth size="small" >
+                    <Grid item xs={12} sm={6} md={4} >
+                        <FormControl fullWidth size="small">
                             <InputLabel id="category-select-label">
                                 Choose Category
                             </InputLabel>
@@ -224,17 +188,19 @@ const AllFiles = () => {
                                 ))}
                             </Select>
                         </FormControl>
-                    </Box>
-                    <Box>
+                    </Grid>
+                    <Grid item xs={12} sm={12} md={2}>
                         <Button
                             variant="contained"
                             component="span"
                             startIcon={<UploadFile />}
                             onClick={handleOpenUploadDialog}
+                            sx={{ bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
+                            fullWidth
                         >
                             Upload Files
                         </Button>
-                    </Box>
+                    </Grid>
                 </Grid>
             </Box>
 
@@ -262,7 +228,6 @@ const AllFiles = () => {
                         </IconButton>
                     </DialogTitle>
                     <DialogContent>
-                        {/* Alert Box */}
                         <Box
                             sx={{
                                 boxShadow: 2,
@@ -297,8 +262,7 @@ const AllFiles = () => {
                         <Box
                             sx={{
                                 boxShadow: 3,
-                                width: "70%",
-                                ml: "15%",
+                                width: "100%",
                                 display: "flex",
                                 flexDirection: "column",
                                 alignItems: "center",
@@ -308,7 +272,7 @@ const AllFiles = () => {
                                 background: "linear-gradient(145deg, #f3f3f3, #ffffff)",
                             }}
                         >
-                            <FormControl fullWidth size="small" >
+                            <FormControl fullWidth size="small">
                                 <InputLabel id="category-select-label">
                                     Select Category
                                 </InputLabel>
@@ -340,12 +304,13 @@ const AllFiles = () => {
                         </Box>
                     </DialogContent>
 
-                    <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', pb: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', pb: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', sm: 'auto' }, marginBottom: { xs: '10px', sm: '0px' } }}>
                             <Button
                                 onClick={handleUploadButtonClick}
                                 variant="contained"
                                 disabled={!chooseCategory}
+                                sx={{ bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
                             >
                                 Select Files
                             </Button>
@@ -363,6 +328,8 @@ const AllFiles = () => {
                             onClick={handleSendFiles}
                             variant="contained"
                             disabled={!chooseCategory || selectedFiles.length === 0}
+                            sx={{ bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
+                            fullWidth={{ xs: true, sm: false }}
                         >
                             Submit
                         </Button>
@@ -373,6 +340,32 @@ const AllFiles = () => {
             <Box sx={{ mt: 2, height: calculateDataTableHeight() }}>
                 <DataTable refreshData={refreshData} searchTerm={searchTerm} category={chooseCategory} data={tableData} />
             </Box>
+            <Dialog open={success}
+                onClose={() => setSuccess(false)}
+                fullWidth
+                maxWidth="sm"
+                sx={{ "& .MuiDialog-paper": { width: "450px" } }}
+            >
+                <DialogContent sx={{ textAlign: "center", p: 3 }}>
+                    <Typography variant="h6">{successMessage}</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setSuccess(false)}>OK</Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog open={error}
+                onClose={() => setError(false)}
+                fullWidth
+                maxWidth="sm"
+                sx={{ "& .MuiDialog-paper": { width: "450px" } }}
+            >
+                <DialogContent sx={{ textAlign: "center", p: 3 }}>
+                    <Typography variant="h6" color="error">{errorMessage}</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setError(false)}>OK</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };
