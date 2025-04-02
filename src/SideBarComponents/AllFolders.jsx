@@ -193,24 +193,38 @@ const AllFolders = () => {
         setFolderName("");
     };
 
+    const [createFolder, setCreateFolder] = useState("");
+    const [createFolderOpen, setCreateFolderOpen] = useState(false);
+    const [creating, setCreating] = useState(false);
+
     const handleCreateFolder = async () => {
+        setOpen(false);
         if (!folderName.trim()) {
-            alert("Please enter a folder name");
+            setCreateFolder("Please enter a folder name");
+            setCreateFolderOpen(true);
             return;
         }
+
+        setCreating(true);
+        setCreateFolder("Creating folder...");
+        setCreateFolderOpen(true);
+
         try {
             await axiosInstance.post(`/planotech-inhouse/create/folder/${folderName}`, {}, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
-            toast.success("Folder created successfully");
+
+            setCreateFolder("✅ Folder created successfully!");
             setFolderName("");
             handleClose();
             fetchFolders();
         } catch (error) {
             console.error("Error creating folder:", error);
-            toast.error("Failed to create folder");
+            setCreateFolder("❌ Failed to create folder");
+        } finally {
+            setCreating(false);
         }
     };
 
@@ -349,6 +363,85 @@ const AllFolders = () => {
             return <ImageIcon sx={{ color: '#098dc6' }} />;
         } else {
             return <InsertDriveFileIcon sx={{ color: '#f8d775' }} />;
+        }
+    };
+
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deleteMessage, setDeleteMessage] = useState("Deleting...");
+    const [deleting, setDeleting] = useState(false);
+
+    const handleDeleteFolder = async (folderId) => {
+        setDeleteMessage("Deleting...");
+        setDeleteOpen(true);
+        setDeleting(true);
+
+        try {
+            await axiosInstance.delete(`/planotech-inhouse/admin/delete/folder/${folderId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+            });
+
+            setDeleteMessage("✅ Folder successfully deleted!");
+            fetchFolders();
+        } catch (error) {
+            if (error.response && error.response.data) {
+                const { message } = error.response.data;
+                if (message === "Employess Restricted, Admin use only") {
+                    setDeleteMessage("❌ Access Denied! Only admins can delete folders.");
+                } else {
+                    setDeleteMessage(message || "Failed to delete folder!");
+                }
+            } else {
+                setDeleteMessage("An unexpected error occurred!");
+            }
+
+            console.error("Error deleting folder:", error);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const handleDeleteFile = async (file, entityId) => {
+        setDeleteMessage("Deleting...");
+        setDeleteOpen(true);
+        setDeleting(true);
+
+        try {
+            await axiosInstance.delete(`/planotech-inhouse/admin/delete/file?folderId=${entityId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                },
+                data: {
+                    id: file.id,
+                    type: file.type,
+                    fileName: file.fileName,
+                    fileLink: file.fileLink,
+                    fileSize: file.fileSize,
+                    time: file.time,
+                    createdBy: file.createdBy
+                },
+            });
+
+            setDeleteMessage("✅ File deleted successfully!");
+            fetchFiles(entityId);
+        } catch (error) {
+            if (error.response && error.response.data) {
+                const { message } = error.response.data;
+                if (message === "Employess Restricted, Admin use only") {
+                    setDeleteMessage("❌ Access Denied! Only admins can delete folders.");
+                } else {
+                    setDeleteMessage(message || "Failed to delete folder!");
+                }
+            } else {
+                setDeleteMessage("An unexpected error occurred!");
+            }
+
+            console.error("Error deleting folder:", error);
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -548,10 +641,11 @@ const AllFolders = () => {
                                                         )}
                                                     </IconButton>
                                                 </Tooltip>
-                                                <Tooltip title="Admin access only, employees restricted" arrow>
+                                                <Tooltip>
                                                     <IconButton
                                                         onClick={(event) => {
                                                             event.stopPropagation();
+                                                            handleDeleteFile(file, openFolder);
                                                         }}
                                                         sx={{ color: "gray", mr: 7 }}
                                                     >
@@ -677,10 +771,11 @@ const AllFolders = () => {
                                                     )}
                                                 </IconButton>
                                             </Tooltip>
-                                            <Tooltip title="Admin access only, employees restricted" arrow>
+                                            <Tooltip>
                                                 <IconButton
                                                     onClick={(event) => {
                                                         event.stopPropagation();
+                                                        handleDeleteFolder(folder.entityId, event);
                                                     }}
                                                     sx={{ color: "gray", mr: 7 }}
                                                 >
@@ -758,7 +853,6 @@ const AllFolders = () => {
 
                 {/* Create Folder Dialog */}
                 <Dialog open={open} onClose={handleClose}>
-                    {/* Dialog Title with Proper Styling */}
                     <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>
                         Create New Folder
                     </DialogTitle>
@@ -797,7 +891,75 @@ const AllFolders = () => {
                         >
                             {uploading ? "Uploading File....." : uploadStatus}
                         </Typography>
-                        {uploading && <LinearProgress sx={{ mt: 3 }} />}
+                        {uploading && (
+                            <LinearProgress
+                                sx={{
+                                    mt: 3,
+                                    "& .MuiLinearProgress-bar": {
+                                        backgroundColor: "#ba343b",
+                                    },
+                                    backgroundColor: "#ffccd0",
+                                }}
+                            />
+                        )}
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog
+                    open={deleteOpen}
+                    onClose={() => setDeleteOpen(false)}
+                    fullWidth
+                    maxWidth="sm"
+                    sx={{ "& .MuiDialog-paper": { width: "450px" } }}
+                >
+                    <DialogContent sx={{ textAlign: "center", p: 3 }}>
+                        <Typography
+                            variant="h6"
+                            gutterBottom
+                            sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                        >
+                            {deleteMessage}
+                        </Typography>
+                        {deleting &&
+                            <LinearProgress
+                                sx={{
+                                    mt: 3,
+                                    "& .MuiLinearProgress-bar": {
+                                        backgroundColor: "#ba343b",
+                                    },
+                                    backgroundColor: "#ffccd0",
+                                }}
+                            />
+                        }
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog
+                    open={createFolderOpen}
+                    onClose={() => setCreateFolderOpen(false)}
+                    fullWidth
+                    maxWidth="sm"
+                    sx={{ "& .MuiDialog-paper": { width: "450px" } }}
+                >
+                    <DialogContent sx={{ textAlign: "center", p: 3 }}>
+                        <Typography
+                            variant="h6"
+                            gutterBottom
+                            sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                        >
+                            {createFolder}
+                        </Typography>
+                        {creating && (
+                            <LinearProgress
+                                sx={{
+                                    mt: 3,
+                                    "& .MuiLinearProgress-bar": {
+                                        backgroundColor: "#ba343b",
+                                    },
+                                    backgroundColor: "#ffccd0",
+                                }}
+                            />
+                        )}
                     </DialogContent>
                 </Dialog>
             </Box>
