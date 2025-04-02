@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useState } from "react";
 import Sheet from "@mui/joy/Sheet";
 import Typography from "@mui/joy/Typography";
@@ -6,7 +7,7 @@ import FormLabel from "@mui/joy/FormLabel";
 import Input from "@mui/joy/Input";
 import Button from "@mui/joy/Button";
 import { Box, CircularProgress } from "@mui/material";
-import { ToastContainer, toast } from "react-toastify";
+import { ToastContainer } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../Helper/AxiosInstance";
 import IconButton from "@mui/joy/IconButton";
@@ -15,12 +16,12 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Data from "../Assets/data.jpeg";
 import CryptoJS from 'crypto-js';
 import { secretKey } from '../Helper/SecretKey';
+import { LinearProgress, Dialog, DialogContent } from "@mui/material";
 
 const Login = () => {
     const [formData, setFormData] = useState({ email: "", password: "" });
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState({});
-    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -28,6 +29,10 @@ const Login = () => {
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
+
+    const [loginMessage, setLoginMessage] = useState("");
+    const [loginOpen, setLoginOpen] = useState(false);
+    const [loginLoading, setLoginLoading] = useState(false);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -47,7 +52,8 @@ const Login = () => {
         };
 
         if (Object.keys(newErrors).length === 0) {
-            setLoading(true);
+            setLoginLoading(true);
+            
             try {
                 const response = await axiosInstance.post("/planotech-inhouse/user/login", formData, {
                     headers: {
@@ -55,16 +61,21 @@ const Login = () => {
                     },
                     params: params,
                 });
+
                 if (response.status === 200) {
                     const encryptedToken = CryptoJS.AES.encrypt(response.data.token, secretKey).toString();
                     sessionStorage.setItem("dc", encryptedToken);
-                    toast.success("Login Successful!");
-                    navigate("/dashboard");
+                    setLoginOpen(true);
+                    setLoginMessage("✅ Login Successful! Redirecting...");
+                    setTimeout(() => {
+                        navigate("/dashboard");
+                    }, 2000);
                 }
             } catch (error) {
-                toast.error(error.response?.data?.message || "Invalid email or password.");
+                setLoginOpen(true);
+                setLoginMessage(error.response?.data?.message || "❌ Invalid email or password.");
             } finally {
-                setLoading(false);
+                setLoginLoading(false);
             }
         }
     };
@@ -144,7 +155,7 @@ const Login = () => {
                             <Input
                                 name="email"
                                 type="email"
-                                placeholder="johndoe@email.com"
+                                placeholder="email"
                                 value={formData.email}
                                 onChange={handleChange}
                             />
@@ -179,17 +190,35 @@ const Login = () => {
                             sx={{
                                 mt: 2,
                                 width: "auto",
-                                backgroundColor: loading ? "#BDBDBD" : "#ba343b",
+                                backgroundColor: loginLoading ? "#BDBDBD" : "#ba343b",
                                 color: "white",
-                                "&:hover": { backgroundColor: loading ? "#BDBDBD" : "#9e2b31" },
+                                "&:hover": { backgroundColor: loginLoading ? "#BDBDBD" : "#9e2b31" },
                             }}
-                            disabled={loading}
+                            disabled={loginLoading}
                             variant="contained"
                         >
-                            {loading ? <CircularProgress size={24} sx={{ color: "#ba343b" }} /> : "Login"}
+                            {loginLoading ? <CircularProgress size={24} sx={{ color: "#ba343b" }} /> : "Login"}
                         </Button>
                     </Sheet>
                 </Box>
+
+                <Dialog
+                    open={loginOpen}
+                    onClose={() => setLoginOpen(false)}
+                    fullWidth
+                    maxWidth="sm"
+                    sx={{ "& .MuiDialog-paper": { width: "450px" } }}
+                >
+                    <DialogContent sx={{ textAlign: "center", p: 3 }}>
+                        <Typography
+                            variant="h6"
+                            gutterBottom
+                            sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                        >
+                            {loginMessage}
+                        </Typography>
+                    </DialogContent>
+                </Dialog>
             </Box>
             <ToastContainer />
         </>

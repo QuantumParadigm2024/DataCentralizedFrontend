@@ -25,7 +25,6 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    console.log("Logging out...");
     sessionStorage.removeItem("dc");
     navigate("/");
   };
