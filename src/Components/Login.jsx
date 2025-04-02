@@ -16,7 +16,7 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Data from "../Assets/data.jpeg";
 import CryptoJS from 'crypto-js';
 import { secretKey } from '../Helper/SecretKey';
-import { LinearProgress, Dialog, DialogContent } from "@mui/material";
+import { Dialog, DialogContent } from "@mui/material";
 
 const Login = () => {
     const [formData, setFormData] = useState({ email: "", password: "" });
