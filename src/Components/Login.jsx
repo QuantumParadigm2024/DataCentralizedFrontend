@@ -69,7 +69,7 @@ const Login = () => {
                     setLoginMessage("✅ Login Successful! Redirecting...");
                     setTimeout(() => {
                         navigate("/dashboard");
-                    }, 2000);
+                    }, 1000);
                 }
             } catch (error) {
                 setLoginOpen(true);
