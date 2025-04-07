@@ -10,15 +10,13 @@ import {
   Divider,
   IconButton,
 } from "@mui/material";
-import FolderIcon from "@mui/icons-material/Folder";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import CollectionsIcon from "@mui/icons-material/Collections";
-import StarIcon from "@mui/icons-material/Star";
-import FileCopyIcon from "@mui/icons-material/FileCopy";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useNavigate } from "react-router-dom";
+import FolderCopyTwoToneIcon from '@mui/icons-material/FolderCopyTwoTone';
+import FileCopyTwoToneIcon from '@mui/icons-material/FileCopyTwoTone';
+import StarTwoToneIcon from '@mui/icons-material/StarTwoTone';
 
 const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
   const [activeItem, setActiveItem] = useState(null);
@@ -30,7 +28,6 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
   };
 
   return (
-
     <Box
       sx={{
         width: drawerOpen ? 200 : 80,
@@ -54,11 +51,9 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
 
       <List sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
         {[
-          { text: "All Files", icon: <FileCopyIcon sx={{ fontSize: 28 }} />, key: "allFiles" },
-          { text: "All Folders", icon: <FolderIcon sx={{ fontSize: 28 }} />, key: "allFolders" },
-          // { text: "Recents", icon: <AccessTimeIcon sx={{ fontSize: 28 }} />, key: "recent" },
-          // { text: "Collections", icon: <CollectionsIcon sx={{ fontSize: 28 }} />, key: "collections" },
-          { text: "Starred", icon: <StarIcon sx={{ fontSize: 28 }} />, key: "starred" },
+          { text: "All Files", icon: <FileCopyTwoToneIcon sx={{ fontSize: 28 }} />, key: "allFiles" },
+          { text: "All Folders", icon: <FolderCopyTwoToneIcon sx={{ fontSize: 28 }} />, key: "allFolders" },
+          { text: "Starred", icon: <StarTwoToneIcon sx={{ fontSize: 29 }} />, key: "starred" },
         ].map(({ text, icon, key }) => (
           <ListItem key={key} disablePadding>
             <ListItemButton
@@ -89,7 +84,7 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
             <ListItemButton
               onClick={() => {
                 if (key === "logout") {
-                  onClick?.(); 
+                  onClick?.();
                 } else {
                   setSelectedContent(key);
                   setActiveItem(key);
