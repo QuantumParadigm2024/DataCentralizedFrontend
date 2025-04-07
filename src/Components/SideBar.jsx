@@ -15,8 +15,8 @@ import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useNavigate } from "react-router-dom";
 import FolderCopyTwoToneIcon from '@mui/icons-material/FolderCopyTwoTone';
-import FileCopyTwoToneIcon from '@mui/icons-material/FileCopyTwoTone';
 import StarTwoToneIcon from '@mui/icons-material/StarTwoTone';
+import ContactPageTwoToneIcon from '@mui/icons-material/ContactPageTwoTone';
 
 const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
   const [activeItem, setActiveItem] = useState(null);
@@ -51,7 +51,7 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
 
       <List sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
         {[
-          { text: "Data", icon: <FileCopyTwoToneIcon sx={{ fontSize: 28 }} />, key: "allFiles" },
+          { text: "Datas", icon: <ContactPageTwoToneIcon sx={{ fontSize: 28 }} />, key: "allFiles" },
           { text: "All Folders", icon: <FolderCopyTwoToneIcon sx={{ fontSize: 28 }} />, key: "allFolders" },
           { text: "Starred", icon: <StarTwoToneIcon sx={{ fontSize: 29 }} />, key: "starred" },
         ].map(({ text, icon, key }) => (
