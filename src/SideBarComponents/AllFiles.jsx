@@ -15,6 +15,11 @@ import {
     Select,
     MenuItem,
     IconButton,
+    TableHead,
+    TableRow,
+    Table,
+    TableCell,
+    TableBody,
 } from "@mui/material";
 import { Search, UploadFile, CloseRounded } from "@mui/icons-material";
 import axiosInstance from "../Helper/AxiosInstance";
@@ -25,7 +30,7 @@ import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
 import demo from "../Assets/ColumnNaame.jpg";
 
 const AllFiles = () => {
-    const [chooseCategory, setChoosecategory] = useState(false);
+    const [chooseCategory, setChoosecategory] = useState(""); // Initialize as empty string
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [refreshData, setRefreshData] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -37,6 +42,16 @@ const AllFiles = () => {
     const [successMessage, setSuccessMessage] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
     const [error, setError] = useState(false);
+    const [addManualDialog, setAddManualDialog] = useState(false);
+    const [manualData, setManualData] = useState([{
+        name: "",
+        email: "",
+        phoneNumber: "",
+        designation: "",
+        address: "",
+        companyName: "",
+        industryType: "",
+    }]);
 
     const decryptToken = (encryptedToken) => {
         try {
@@ -54,9 +69,16 @@ const AllFiles = () => {
     const handleOpenUploadDialog = () => {
         setOpenUploadDialog(true);
     };
-
     const handleCloseUploadDialog = () => {
         setOpenUploadDialog(false);
+    };
+
+    const handleOpenaddManualDialog = () => {
+        handleCloseUploadDialog(false);
+        setAddManualDialog(true);
+    };
+    const handleCloseAddManualDialog = () => {
+        setAddManualDialog(false);
     };
 
     const handleUploadButtonClick = () => {
@@ -111,7 +133,7 @@ const AllFiles = () => {
                 },
             });
 
-            setSuccessMessage("Files uploaded successfully!");
+            setSuccessMessage(" ✅ Files uploaded successfully!");
             setSuccess(true);
             setOpenUploadDialog(false);
             setSelectedFiles([]);
@@ -129,6 +151,80 @@ const AllFiles = () => {
             return `calc(100% - ${headerRef.current.offsetHeight + 16}px)`;
         }
         return "100%";
+    };
+
+    const handleManualInputChange = (event, index, field) => {
+        const newManualData = [...manualData];
+        newManualData[index][field] = event.target.value;
+        setManualData(newManualData);
+    };
+
+    const handleAddManualRow = () => {
+        setManualData([
+            ...manualData,
+            {
+                name: "",
+                email: "",
+                phoneNumber: "",
+                designation: "",
+                address: "",
+                companyName: "",
+                industryType: "",
+            },
+        ]);
+    };
+
+    const handleRemoveManualRow = (index) => {
+        const newManualData = [...manualData];
+        newManualData.splice(index, 1);
+        setManualData(newManualData);
+    };
+
+    const handleSaveManualData = async () => {
+        if (!chooseCategory) {
+            setErrorMessage("Please select a category before saving manual data.");
+            setError(true);
+            return;
+        }
+        try {
+            const customer = {
+                ...manualData[0],
+                category: chooseCategory, // Add the selected category
+            };
+
+            const response = await axiosInstance.post(
+                "/planotech-inhouse/add/customers",
+                customer,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                }
+            );
+
+            console.log("response", response);
+            setSuccessMessage("✅ Customers added successfully!");
+            setSuccess(true);
+            setAddManualDialog(false);
+            setManualData([
+                {
+                    name: "",
+                    email: "",
+                    phoneNumber: "",
+                    designation: "",
+                    address: "",
+                    companyName: "",
+                    industryType: "",
+                }
+            ]);
+            setRefreshData((prev) => !prev);
+            setChoosecategory(""); // Reset category after successful save if needed
+        } catch (err) {
+            console.error("Error adding customers:", err);
+            setErrorMessage("❌ Failed to add customer data manually. Please try again.");
+            setError(true);
+        }
     };
 
     return (
@@ -162,7 +258,7 @@ const AllFiles = () => {
                     <Grid item xs={12} sm={6} md={4} >
                         <FormControl fullWidth size="small">
                             <InputLabel id="category-select-label">
-                                Choose Category
+                                See Category Wise
                             </InputLabel>
                             <Select
                                 labelId="category-choose"
@@ -270,6 +366,7 @@ const AllFiles = () => {
                                 p: 2,
                                 borderRadius: "16px",
                                 background: "linear-gradient(145deg, #f3f3f3, #ffffff)",
+                                mb: 2, // Add some margin below the category select
                             }}
                         >
                             <FormControl fullWidth size="small">
@@ -302,6 +399,16 @@ const AllFiles = () => {
                                 </Select>
                             </FormControl>
                         </Box>
+
+                        <Button
+                            onClick={handleOpenaddManualDialog}
+                            variant="outlined"
+                            fullWidth
+                            disabled={!chooseCategory}
+                            sx={{ mt: 2 }} // Add some margin above the button
+                        >
+                            Add Data Manually
+                        </Button>
                     </DialogContent>
 
                     <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', pb: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
@@ -344,30 +451,140 @@ const AllFiles = () => {
                 onClose={() => setSuccess(false)}
                 fullWidth
                 maxWidth="sm"
-                sx={{ "& .MuiDialog-paper": { width: "450px" } }}
+                sx={{ "& .MuiDialog-paper": { width: "400px" } }}
             >
-                <DialogContent sx={{ textAlign: "center", p: 3 }}>
+                <DialogContent sx={{ textAlign: "center", p: 1 }}>
                     <Typography variant="h6">{successMessage}</Typography>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setSuccess(false)}>OK</Button>
-                </DialogActions>
             </Dialog>
             <Dialog open={error}
                 onClose={() => setError(false)}
                 fullWidth
                 maxWidth="sm"
-                sx={{ "& .MuiDialog-paper": { width: "450px" } }}
+                sx={{ "& .MuiDialog-paper": { width: "400px" } }}
+
             >
-                <DialogContent sx={{ textAlign: "center", p: 3 }}>
+                <DialogContent sx={{ textAlign: "center", p: 1 }}>
                     <Typography variant="h6" color="error">{errorMessage}</Typography>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setError(false)}>OK</Button>
-                </DialogActions>
             </Dialog>
-        </Box>
-    );
-};
 
-export default AllFiles;
+            <Dialog
+                open={addManualDialog}
+                onClose={handleCloseAddManualDialog}
+                maxWidth="lg"
+                fullWidth
+            >
+                <DialogTitle>Add Customer Manually</DialogTitle>
+                <DialogContent>
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow
+                                sx={{
+                                    "& th": {
+                                        backgroundColor: "#eaf1f0",
+                                        fontWeight: "bold",
+                                        height: "35px",
+                                        fontSize: "0.8rem",
+                                    },
+                                }}
+                            >
+                                <TableCell>SL NO</TableCell>
+                                <TableCell>Name</TableCell>
+                                <TableCell>Email</TableCell>
+                                <TableCell>Phone</TableCell>
+                                <TableCell>Designation</TableCell>
+                                <TableCell>Address</TableCell>
+                                <TableCell>Company</TableCell>
+                                <TableCell>Industry</TableCell>
+                                <TableCell>Action</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {manualData.map((row, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            value={row.name}
+                                            onChange={(e) => handleManualInputChange(e, index, "name")}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                size="small"
+                                                value={row.email}
+                                                onChange={(e) => handleManualInputChange(e, index, "email")}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                size="small"
+                                                value={row.phoneNumber}
+                                                onChange={(e) => handleManualInputChange(e, index, "phoneNumber")}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                size="small"
+                                                value={row.designation}
+                                                onChange={(e) => handleManualInputChange(e, index, "designation")}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                size="small"
+                                                value={row.address}
+                                                onChange={(e) => handleManualInputChange(e, index, "address")}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                size="small"
+                                                value={row.companyName}
+                                                onChange={(e) => handleManualInputChange(e, index, "companyName")}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                size="small"
+                                                value={row.industryType}
+                                                onChange={(e) => handleManualInputChange(e, index, "industryType")}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <IconButton onClick={() => handleRemoveManualRow(index)}
+                                                color="error">
+                                                <CloseRounded />
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        <Box mt={2}>
+                            <Button
+                                onClick={handleAddManualRow}
+                            >
+                                Add Row
+                            </Button>
+                        </Box>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCloseAddManualDialog}>Cancel</Button>
+                        <Button
+                            variant="contained"
+                            sx={{ bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
+                            onClick={handleSaveManualData}
+                            disabled={!chooseCategory}
+                        >
+                            Save
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            </Box>
+        );
+    };
+    
+    export default AllFiles;
