@@ -189,7 +189,7 @@ const AllFiles = () => {
         try {
             const customer = {
                 ...manualData[0],
-                category: chooseCategory, // Add the selected category
+                category: chooseCategory,
             };
 
             const response = await axiosInstance.post(
@@ -219,7 +219,7 @@ const AllFiles = () => {
                 }
             ]);
             setRefreshData((prev) => !prev);
-            setChoosecategory(""); // Reset category after successful save if needed
+            setChoosecategory("");  
         } catch (err) {
             console.error("Error adding customers:", err);
             setErrorMessage("❌ Failed to add customer data manually. Please try again.");
@@ -399,16 +399,6 @@ const AllFiles = () => {
                                 </Select>
                             </FormControl>
                         </Box>
-
-                        <Button
-                            onClick={handleOpenaddManualDialog}
-                            variant="outlined"
-                            fullWidth
-                            disabled={!chooseCategory}
-                            sx={{ mt: 2 }} // Add some margin above the button
-                        >
-                            Add Data Manually
-                        </Button>
                     </DialogContent>
 
                     <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', pb: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
@@ -431,6 +421,14 @@ const AllFiles = () => {
                                 )}
                             </Box>
                         </Box>
+                        <Button
+                            onClick={handleOpenaddManualDialog}
+                            variant="contained"
+                            disabled={!chooseCategory}
+                            sx={{ bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
+                        >
+                            Add Data Manually
+                        </Button>
                         <Button
                             onClick={handleSendFiles}
                             variant="contained"
