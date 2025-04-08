@@ -433,7 +433,7 @@ const AllFolders = () => {
             if (error.response && error.response.data) {
                 const { message } = error.response.data;
                 if (message === "Employess Restricted, Admin use only") {
-                    setDeleteMessage("❌ Access Denied! Only admins can delete folders.");
+                    setDeleteMessage("❌ Access Denied! Only admin have access.");
                 } else {
                     setDeleteMessage(message || "Failed to delete folder!");
                 }
