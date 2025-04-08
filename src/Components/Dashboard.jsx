@@ -1,17 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-    Box,
-    Grid,
-    IconButton,
-    Drawer,
-    useMediaQuery,
-    useTheme,
-} from "@mui/material";
+import { Box, Grid, IconButton, Drawer, useMediaQuery, useTheme } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import SideBar from "./SideBar";
-import Recent from "../SideBarComponents/Recent";
 import AllFiles from "../SideBarComponents/AllFiles";
-import Collections from "../SideBarComponents/Collections";
 import Starred from "../SideBarComponents/Starred";
 import Logo from "../Assets/Planotech Logo Black.png";
 import AllFolders from "../SideBarComponents/AllFolders";
@@ -30,12 +21,8 @@ const Dashboard = () => {
 
     const renderContent = () => {
         switch (selectedContent) {
-            case "recent":
-                return <Recent />;
             case "allFolders":
                 return <AllFolders />;
-            case "collections":
-                return <Collections />;
             case "starred":
                 return <Starred />;
             case "profile":

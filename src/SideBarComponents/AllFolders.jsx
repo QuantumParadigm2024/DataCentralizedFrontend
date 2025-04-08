@@ -19,6 +19,8 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import FolderZipIcon from '@mui/icons-material/FolderZip';
 import ImageIcon from '@mui/icons-material/Image';
+import ClearIcon from '@mui/icons-material/Clear';
+import CheckIcon from '@mui/icons-material/Check';
 
 const AllFolders = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -389,7 +391,7 @@ const AllFolders = () => {
             if (error.response && error.response.data) {
                 const { message } = error.response.data;
                 if (message === "Employess Restricted, Admin use only") {
-                    setDeleteMessage("❌ Access Denied! Only admins can delete folders.");
+                    setDeleteMessage("❌ Access Denied! Only admin have access.");
                 } else {
                     setDeleteMessage(message || "Failed to delete folder!");
                 }
@@ -513,7 +515,7 @@ const AllFolders = () => {
                                     onClose={handleUploadClose}
                                 >
                                     <MenuItem>
-                                        <label style={{ fontWeight: "bold", color: "grey", fontSize: "14px" }}>
+                                        <label style={{ fontWeight: "bold", color: "grey", fontSize: "12.5px" }}>
                                             Small File (≤100mb)
                                             <Input
                                                 type="file"
@@ -527,7 +529,7 @@ const AllFolders = () => {
                                         </label>
                                     </MenuItem>
                                     <MenuItem>
-                                        <label style={{ fontWeight: "bold", color: "grey", fontSize: "14px" }}>
+                                        <label style={{ fontWeight: "bold", color: "grey", fontSize: "12.5px" }}>
                                             Large File (≤1gb)
                                             <Input
                                                 type="file"
@@ -884,13 +886,36 @@ const AllFolders = () => {
                     sx={{ "& .MuiDialog-paper": { width: "450px" } }}
                 >
                     <DialogContent sx={{ textAlign: "center", p: 3 }}>
-                        <Typography
-                            variant="h6"
-                            gutterBottom
-                            sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
-                        >
-                            {uploading ? "Uploading File....." : uploadStatus}
-                        </Typography>
+                        {uploadStatus.includes("✅") ? (
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                                <CheckIcon sx={{ fontSize: 28, color: "#4caf50" }} />
+                                <Typography
+                                    variant="h6"
+                                    sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                                >
+                                    Files uploaded successfully!
+                                </Typography>
+                            </Box>
+                        ) : uploadStatus.includes("❌") ? (
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                                <ClearIcon sx={{ fontSize: 28, color: "#f44336" }} />
+                                <Typography
+                                    variant="h6"
+                                    sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                                >
+                                    {uploadStatus.replace("❌ ", "")}
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Typography
+                                variant="h6"
+                                gutterBottom
+                                sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                            >
+                                {uploading ? "Uploading File....." : uploadStatus}
+                            </Typography>
+                        )}
+
                         {uploading && (
                             <LinearProgress
                                 sx={{
@@ -913,14 +938,37 @@ const AllFolders = () => {
                     sx={{ "& .MuiDialog-paper": { width: "450px" } }}
                 >
                     <DialogContent sx={{ textAlign: "center", p: 3 }}>
-                        <Typography
-                            variant="h6"
-                            gutterBottom
-                            sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
-                        >
-                            {deleteMessage}
-                        </Typography>
-                        {deleting &&
+                        {deleteMessage.includes("✅") ? (
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                                <CheckIcon sx={{ fontSize: 28, color: "#4caf50" }} />
+                                <Typography
+                                    variant="h6"
+                                    sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                                >
+                                    Folder successfully deleted!
+                                </Typography>
+                            </Box>
+                        ) : deleteMessage.includes("❌") ? (
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                                <ClearIcon sx={{ fontSize: 28, color: "#f44336" }} />
+                                <Typography
+                                    variant="h6"
+                                    sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                                >
+                                    {deleteMessage.replace("❌ ", "")}
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Typography
+                                variant="h6"
+                                gutterBottom
+                                sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                            >
+                                {deleteMessage}
+                            </Typography>
+                        )}
+
+                        {deleting && (
                             <LinearProgress
                                 sx={{
                                     mt: 3,
@@ -930,7 +978,7 @@ const AllFolders = () => {
                                     backgroundColor: "#ffccd0",
                                 }}
                             />
-                        }
+                        )}
                     </DialogContent>
                 </Dialog>
 
@@ -942,13 +990,30 @@ const AllFolders = () => {
                     sx={{ "& .MuiDialog-paper": { width: "450px" } }}
                 >
                     <DialogContent sx={{ textAlign: "center", p: 3 }}>
-                        <Typography
-                            variant="h6"
-                            gutterBottom
-                            sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
-                        >
-                            {createFolder}
-                        </Typography>
+                        {(createFolder === "✅ Folder created successfully!" || createFolder === "❌ Failed to create folder") ? (
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                                {createFolder === "✅ Folder created successfully!" ? (
+                                    <CheckIcon sx={{ fontSize: 28, color: "#4caf50" }} />
+                                ) : (
+                                    <ClearIcon sx={{ fontSize: 28, color: "#f44336" }} />
+                                )}
+                                <Typography
+                                    variant="h6"
+                                    sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                                >
+                                    {createFolder === "✅ Folder created successfully!" ? "Folder created successfully!" : "Failed to create folder"}
+                                </Typography>
+                            </Box>
+                        ) : (
+                            <Typography
+                                variant="h6"
+                                gutterBottom
+                                sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                            >
+                                {createFolder}
+                            </Typography>
+                        )}
+
                         {creating && (
                             <LinearProgress
                                 sx={{

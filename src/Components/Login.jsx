@@ -16,7 +16,9 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import Data from "../Assets/data.jpeg";
 import CryptoJS from 'crypto-js';
 import { secretKey } from '../Helper/SecretKey';
-import { LinearProgress, Dialog, DialogContent } from "@mui/material";
+import { Dialog, DialogContent } from "@mui/material";
+import ClearIcon from '@mui/icons-material/Clear';
+import CheckIcon from '@mui/icons-material/Check';
 
 const Login = () => {
     const [formData, setFormData] = useState({ email: "", password: "" });
@@ -53,7 +55,7 @@ const Login = () => {
 
         if (Object.keys(newErrors).length === 0) {
             setLoginLoading(true);
-            
+
             try {
                 const response = await axiosInstance.post("/planotech-inhouse/user/login", formData, {
                     headers: {
@@ -69,7 +71,7 @@ const Login = () => {
                     setLoginMessage("✅ Login Successful! Redirecting...");
                     setTimeout(() => {
                         navigate("/dashboard");
-                    }, 2000);
+                    }, 1000);
                 }
             } catch (error) {
                 setLoginOpen(true);
@@ -210,13 +212,27 @@ const Login = () => {
                     sx={{ "& .MuiDialog-paper": { width: "450px" } }}
                 >
                     <DialogContent sx={{ textAlign: "center", p: 3 }}>
-                        <Typography
-                            variant="h6"
-                            gutterBottom
-                            sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                        <Box
+                            sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 1,
+                                width: "100%",
+                            }}
                         >
-                            {loginMessage}
-                        </Typography>
+                            {loginMessage.includes("Login Successful") ? (
+                                <CheckIcon sx={{ fontSize: 28, color: "#4caf50" }} />
+                            ) : (
+                                <ClearIcon sx={{ fontSize: 28, color: "#f44336" }} />
+                            )}
+                            <Typography
+                                variant="h6"
+                                sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
+                            >
+                                {loginMessage.replace(/^✅ |^❌ /, "")}
+                            </Typography>
+                        </Box>
                     </DialogContent>
                 </Dialog>
             </Box>
