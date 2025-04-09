@@ -475,7 +475,7 @@ const AllFolders = () => {
                         </Grid>
                         {!openFolder && (
                             <Grid item xs={12} sm="auto" sx={{ mt: { xs: 1, sm: 0 } }}>
-                                <Button startIcon={<CreateNewFolderIcon />} onClick={handleOpen}
+                                <Button fullWidth startIcon={<CreateNewFolderIcon />} onClick={handleOpen}
                                     sx={{
                                         fontWeight: "bold",
                                         bgcolor: '#ba343b',
@@ -871,7 +871,7 @@ const AllFolders = () => {
                         <Button
                             onClick={handleCreateFolder}
                             variant="outlined"
-                            sx={{ borderRadius: "16px", fontWeight: "bold", color: "#ba343b", border: "0.5px solid #ba343b" }}
+                            sx={{ borderRadius: "20px", fontWeight: "bold", color: "#ba343b", border: "0.5px solid #ba343b" }}
                         >
                             Create
                         </Button>
