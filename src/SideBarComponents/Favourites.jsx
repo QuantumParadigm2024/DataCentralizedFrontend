@@ -18,7 +18,7 @@ import FolderZipIcon from '@mui/icons-material/FolderZip';
 import { Star } from "@mui/icons-material";
 import ImageIcon from '@mui/icons-material/Image';
 
-const Starred = () => {
+const Favourites = () => {
     const [starredFolders, setStarredFolders] = useState([]);
     const [starredFiles, setStarredFiles] = useState([]);
     const [openFolder, setOpenFolder] = useState(null);
@@ -138,7 +138,7 @@ const Starred = () => {
     return (
         <Box sx={{ mt: 1 }}>
             <Typography variant="h6" sx={{ fontSize: "18px", fontWeight: "bold" }}>
-                Starred
+                Favourites
             </Typography>
 
             {/* Folders Section */}
@@ -155,7 +155,7 @@ const Starred = () => {
 
                         {starredFolders.length === 0 ? (
                             <Typography color="textSecondary" sx={{ fontSize: '14px', color: 'grey', fontWeight: 'bold', mt: 2 }}>
-                                No starred folders available
+                                No favourites folders yet
                             </Typography>
                         ) : (
                             <Box sx={{ width: '100%', mt: 2 }}>
@@ -329,7 +329,7 @@ const Starred = () => {
 
                 {starredFiles.length === 0 ? (
                     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
-                        <Typography color="textSecondary" sx={{ fontSize: '14px', color: 'grey', fontWeight: 'bold' }}>No starred files available</Typography>
+                        <Typography color="textSecondary" sx={{ fontSize: '14px', color: 'grey', fontWeight: 'bold' }}>No favourites files yet</Typography>
                     </Box>
                 ) : (
                     <Box sx={{ width: '100%', mt: 2 }}>
@@ -420,4 +420,4 @@ const Starred = () => {
     );
 };
 
-export default Starred;
+export default Favourites;

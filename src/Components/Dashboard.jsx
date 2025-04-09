@@ -3,11 +3,11 @@ import { Box, Grid, IconButton, Drawer, useMediaQuery, useTheme } from "@mui/mat
 import MenuIcon from "@mui/icons-material/Menu";
 import SideBar from "./SideBar";
 import AllFiles from "../SideBarComponents/AllFiles";
-import Starred from "../SideBarComponents/Starred";
 import Logo from "../Assets/Planotech Logo Black.png";
 import AllFolders from "../SideBarComponents/AllFolders";
 import NavColorCode from "./NavColorCode";
 import Profile from "../SideBarComponents/Profile";
+import Favourites from "../SideBarComponents/Favourites";
 
 const Dashboard = () => {
     const [selectedContent, setSelectedContent] = useState("allFiles");
@@ -23,8 +23,8 @@ const Dashboard = () => {
         switch (selectedContent) {
             case "allFolders":
                 return <AllFolders />;
-            case "starred":
-                return <Starred />;
+            case "favourites":
+                return <Favourites />;
             case "profile":
                 return <Profile />;
             default:
