@@ -44,7 +44,7 @@ const SideBar = ({ setSelectedContent, drawerOpen, setDrawerOpen }) => {
                 {[
                     { text: "Datas", icon: <ContactPageTwoToneIcon sx={{ fontSize: 28 }} />, key: "allFiles" },
                     { text: "Folders", icon: <FolderCopyTwoToneIcon sx={{ fontSize: 28 }} />, key: "allFolders" },
-                    { text: "Starred", icon: <StarTwoToneIcon sx={{ fontSize: 29 }} />, key: "starred" },
+                    { text: "Favourites", icon: <StarTwoToneIcon sx={{ fontSize: 29 }} />, key: "favourites" },
                 ].map(({ text, icon, key }) => (
                     <ListItem key={key} disablePadding>
                         <ListItemButton

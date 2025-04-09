@@ -10,9 +10,10 @@ import ClearIcon from '@mui/icons-material/Clear';
 import CheckIcon from '@mui/icons-material/Check';
 import demo from "../Assets/ColumnNaame.jpg";
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import TuneIcon from '@mui/icons-material/Tune';
 
 const AllFiles = () => {
-    const [chooseCategory, setChoosecategory] = useState(""); 
+    const [chooseCategory, setChoosecategory] = useState("");
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [refreshData, setRefreshData] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -51,6 +52,9 @@ const AllFiles = () => {
     };
     const handleCloseUploadDialog = () => {
         setOpenUploadDialog(false);
+        setSelectedFiles([]);
+        setChoosecategory("");
+        setRefreshData((prev) => !prev);
     };
 
     const handleOpenaddManualDialog = () => {
@@ -222,10 +226,16 @@ const AllFiles = () => {
                             }}
                         />
                     </Grid>
+
                     <Grid item xs={12} sm={6} md={4} >
                         <FormControl fullWidth size="small">
                             <InputLabel id="category-select-label">
-                                See Category Wise
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                    <TuneIcon fontSize="small" />
+                                    <Typography sx={{ color: "#a6a6a6", fontWeight: 500 }}>
+                                        Category wise
+                                    </Typography>
+                                </Box>
                             </InputLabel>
                             <Select
                                 labelId="category-choose"
@@ -238,12 +248,11 @@ const AllFiles = () => {
                             >
                                 {[
                                     "Event Clients",
-                                    "Venders",
+                                    "Vendors",
                                     "Corporate",
                                     "Executive Data",
                                     "Pharma",
                                     "Customer",
-                                    "Other",
                                 ].map((category) => (
                                     <MenuItem key={category} value={category}>
                                         {category}
@@ -252,6 +261,7 @@ const AllFiles = () => {
                             </Select>
                         </FormControl>
                     </Grid>
+
                     <Grid item xs={12} sm={12} md={2}>
                         <Button
                             variant="contained"
@@ -319,16 +329,6 @@ const AllFiles = () => {
                             </Typography>
                         </Box>
 
-                        {/* {demo && (
-                            <Box sx={{ mb: 3, display: "flex", justifyContent: "center", borderRadius: 2, overflow: "hidden", boxShadow: 2 }}>
-                                <img
-                                    src={demo}
-                                    alt="Demo file format"
-                                    style={{ maxWidth: "100%" }}
-                                />
-                            </Box>
-                        )} */}
-
                         <Box
                             sx={{
                                 width: "100%",
@@ -356,7 +356,7 @@ const AllFiles = () => {
                                 >
                                     {[
                                         "Event Clients",
-                                        "Venders",
+                                        "Vendors",
                                         "Corporate",
                                         "Executive Data",
                                         "Pharma",
