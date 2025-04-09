@@ -1,36 +1,18 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useRef, useEffect } from "react";
-import {
-    Box,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Grid,
-    TextField,
-    Typography,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-    IconButton,
-    TableHead,
-    TableRow,
-    Table,
-    TableCell,
-    TableBody,
-} from "@mui/material";
+import { LinearProgress, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Grid, TextField, Typography, FormControl, InputLabel, Select, MenuItem, IconButton, TableHead, TableRow, Table, TableCell, TableBody, } from "@mui/material";
 import { Search, UploadFile, CloseRounded } from "@mui/icons-material";
 import axiosInstance from "../Helper/AxiosInstance";
 import DataTable from "../Components/DataTable";
 import CryptoJS from "crypto-js";
 import { secretKey } from "../Helper/SecretKey";
-import ReportProblemRoundedIcon from "@mui/icons-material/ReportProblemRounded";
+import ClearIcon from '@mui/icons-material/Clear';
+import CheckIcon from '@mui/icons-material/Check';
 import demo from "../Assets/ColumnNaame.jpg";
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 const AllFiles = () => {
-    const [chooseCategory, setChoosecategory] = useState(""); // Initialize as empty string
+    const [chooseCategory, setChoosecategory] = useState(""); 
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [refreshData, setRefreshData] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -38,8 +20,6 @@ const AllFiles = () => {
     const fileInputRef = useRef(null);
     const [openUploadDialog, setOpenUploadDialog] = useState(false);
     const [tableData, setTableData] = useState([]);
-    const [success, setSuccess] = useState(false);
-    const [successMessage, setSuccessMessage] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
     const [error, setError] = useState(false);
     const [addManualDialog, setAddManualDialog] = useState(false);
@@ -108,18 +88,16 @@ const AllFiles = () => {
         setSelectedFiles(allowedFiles);
     };
 
-    const handleSendFiles = async () => {
-        if (!chooseCategory) {
-            setErrorMessage("Please select a category before uploading.");
-            setError(true);
-            return;
-        }
-        if (selectedFiles.length === 0) {
-            setErrorMessage("Please select files to upload.");
-            setError(true);
-            return;
-        }
+    const [uploading, setUploading] = useState(false);
+    const [statusMessage, setStatusMessage] = useState("");
+    const [statusType, setStatusType] = useState("");
+    const [statusDialogOpen, setStatusDialogOpen] = useState(false);
 
+    const handleSendFiles = async () => {
+        setOpenUploadDialog(false);
+        setUploading(true);
+        setStatusDialogOpen(true);
+        setStatusMessage("Uploading files...");
         const formData = new FormData();
         selectedFiles.forEach((file) => formData.append("file", file));
         formData.append("category", chooseCategory);
@@ -133,16 +111,18 @@ const AllFiles = () => {
                 },
             });
 
-            setSuccessMessage(" ✅ Files uploaded successfully!");
-            setSuccess(true);
-            setOpenUploadDialog(false);
+            setStatusMessage("Files uploaded successfully!");
+            setStatusType("success");
             setSelectedFiles([]);
             setChoosecategory("");
             setRefreshData((prev) => !prev);
         } catch (error) {
             console.error("Upload failed:", error);
-            setErrorMessage("File upload failed. Please try again.");
-            setError(true);
+            setStatusMessage("File upload failed. Please try again.");
+            setStatusType("error");
+        } finally {
+            setUploading(false);
+            setTimeout(() => setStatusDialogOpen(false), 3000);
         }
     };
 
@@ -181,49 +161,36 @@ const AllFiles = () => {
     };
 
     const handleSaveManualData = async () => {
-        if (!chooseCategory) {
-            setErrorMessage("Please select a category before saving manual data.");
-            setError(true);
-            return;
-        }
+        setAddManualDialog(false);
+
         try {
             const customer = {
                 ...manualData[0],
                 category: chooseCategory,
             };
 
-            const response = await axiosInstance.post(
-                "/planotech-inhouse/add/customers",
-                customer,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    },
-                }
-            );
+            await axiosInstance.post("/planotech-inhouse/add/customers", customer, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+            });
 
-            console.log("response", response);
-            setSuccessMessage("✅ Customers added successfully!");
-            setSuccess(true);
-            setAddManualDialog(false);
-            setManualData([
-                {
-                    name: "",
-                    email: "",
-                    phoneNumber: "",
-                    designation: "",
-                    address: "",
-                    companyName: "",
-                    industryType: "",
-                }
-            ]);
+            setStatusMessage("Customers added successfully!");
+            setStatusType("success");
+            setStatusDialogOpen(true);
+            setManualData([{
+                name: "", email: "", phoneNumber: "", designation: "", address: "", companyName: "", industryType: "",
+            }]);
+            setChoosecategory("");
             setRefreshData((prev) => !prev);
-            setChoosecategory("");  
         } catch (err) {
             console.error("Error adding customers:", err);
-            setErrorMessage("❌ Failed to add customer data manually. Please try again.");
-            setError(true);
+            setStatusMessage("Failed to add customer data manually. Please try again.");
+            setStatusType("error");
+            setStatusDialogOpen(true);
+        } finally {
+            setTimeout(() => setStatusDialogOpen(false), 3000);
         }
     };
 
@@ -291,7 +258,7 @@ const AllFiles = () => {
                             component="span"
                             startIcon={<UploadFile />}
                             onClick={handleOpenUploadDialog}
-                            sx={{ bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
+                            sx={{ fontWeight: 'bold', bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
                             fullWidth
                         >
                             Upload Files
@@ -316,63 +283,67 @@ const AllFiles = () => {
                     onClose={handleCloseUploadDialog}
                     maxWidth="sm"
                     fullWidth
+                    PaperProps={{
+                        sx: {
+                            background: "linear-gradient(135deg, #ffffff, #f9f9f9)",
+                            boxShadow: "0px 10px 25px rgba(0,0,0,0.1)"
+                        }
+                    }}
                 >
-                    <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: 'center' }}>
-                        <span>File Requirements</span>
-                        <IconButton onClick={handleCloseUploadDialog} color="primary">
-                            <CloseRounded sx={{ color: 'black' }} />
+                    <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 3, pt: 2 }}>
+                        <Typography variant="h6" sx={{ color: "#ba343b", fontWeight: "bold" }}>
+                            File Requirements
+                        </Typography>
+                        <IconButton onClick={handleCloseUploadDialog}>
+                            <CloseRounded sx={{ color: '#ba343b' }} />
                         </IconButton>
                     </DialogTitle>
-                    <DialogContent>
+
+                    <DialogContent sx={{ px: 3, pt: 0 }}>
                         <Box
                             sx={{
-                                boxShadow: 2,
+                                boxShadow: 1,
                                 p: 2,
                                 mb: 3,
                                 borderRadius: "12px",
                                 display: "flex",
                                 alignItems: "center",
-                                backgroundColor: "#FFF3CD",
+                                backgroundColor: "#fff9e6",
                             }}
                         >
-                            <ReportProblemRoundedIcon
-                                sx={{ color: "red", mr: 2, fontSize: "60px" }}
-                            />
-                            <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                                Before uploading, ensure your file contains any of the following headers:
-                                Name, Email, Phone Number, Category, Designation, Address, Company Name, Industry Type, Entry Date, Entered by.
-                                Incorrect headers may lead to data processing errors
+                            <InfoOutlinedIcon sx={{ color: "#d32f2f", mr: 2, fontSize: "30px" }} />
+                            <Typography variant="body2" sx={{ flexGrow: 1, color: "#5f5f5f" }}>
+                                Before uploading, ensure your file contains any of the following headers:{" "}
+                                <b>Name, Email, Phone Number, Category, Designation, Address, Company Name, Industry Type.</b>{" "}
+                                Incorrect headers may lead to data processing errors.
                             </Typography>
                         </Box>
 
-                        {demo && (
-                            <Box sx={{ mb: 2, display: "flex", justifyContent: "center" }}>
+                        {/* {demo && (
+                            <Box sx={{ mb: 3, display: "flex", justifyContent: "center", borderRadius: 2, overflow: "hidden", boxShadow: 2 }}>
                                 <img
                                     src={demo}
                                     alt="Demo file format"
-                                    style={{ maxWidth: "100%", borderRadius: "8px" }}
+                                    style={{ maxWidth: "100%" }}
                                 />
                             </Box>
-                        )}
+                        )} */}
 
                         <Box
                             sx={{
-                                boxShadow: 3,
                                 width: "100%",
                                 display: "flex",
                                 flexDirection: "column",
                                 alignItems: "center",
-                                color: "gray",
                                 p: 2,
+                                border: "1px dashed #ccc",
                                 borderRadius: "16px",
-                                background: "linear-gradient(145deg, #f3f3f3, #ffffff)",
-                                mb: 2, // Add some margin below the category select
+                                backgroundColor: "#fafafa",
+                                mb: 2,
                             }}
                         >
                             <FormControl fullWidth size="small">
-                                <InputLabel id="category-select-label">
-                                    Select Category
-                                </InputLabel>
+                                <InputLabel id="category-select-label">Select Category</InputLabel>
                                 <Select
                                     labelId="category-select"
                                     id="category-select"
@@ -398,43 +369,90 @@ const AllFiles = () => {
                                     ))}
                                 </Select>
                             </FormControl>
+
+                            {selectedFiles.length > 0 && (
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        mt: 1,
+                                        width: "100%",
+                                        textAlign: "left",
+                                        color: "gray",
+                                        fontStyle: "italic",
+                                    }}
+                                >
+                                    {selectedFiles.length === 1
+                                        ? selectedFiles[0].name
+                                        : `${selectedFiles.length} files selected`}
+                                </Typography>
+                            )}
                         </Box>
                     </DialogContent>
 
-                    <DialogActions sx={{ display: 'flex', justifyContent: 'space-between', pb: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: '100%', sm: 'auto' }, marginBottom: { xs: '10px', sm: '0px' } }}>
-                            <Button
-                                onClick={handleUploadButtonClick}
-                                variant="contained"
-                                disabled={!chooseCategory}
-                                sx={{ bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
-                            >
-                                Select Files
-                            </Button>
-                            <Box>
-                                {selectedFiles.length > 0 && (
-                                    <Typography variant="body2" sx={{ ml: 1 }}>
-                                        {selectedFiles.length === 1
-                                            ? selectedFiles[0].name
-                                            : `${selectedFiles.length} files selected`}
-                                    </Typography>
-                                )}
-                            </Box>
-                        </Box>
+                    <DialogActions
+                        sx={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 2,
+                            px: 3,
+                            pb: 3,
+                        }}
+                    >
+                        <Button
+                            onClick={handleUploadButtonClick}
+                            variant="outlined"
+                            disabled={!chooseCategory}
+                            sx={{
+                                fontWeight: "bold",
+                                color: "#ba343b",
+                                borderColor: "#ba343b",
+                                borderRadius: "30px",
+                                px: 3,
+                                "&:hover": {
+                                    backgroundColor: "#ba343b",
+                                    color: "white",
+                                },
+                            }}
+                        >
+                            Select Files
+                        </Button>
+
                         <Button
                             onClick={handleOpenaddManualDialog}
-                            variant="contained"
+                            variant="outlined"
                             disabled={!chooseCategory}
-                            sx={{ bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
+                            sx={{
+                                fontWeight: "bold",
+                                color: "#ba343b",
+                                borderColor: "#ba343b",
+                                borderRadius: "30px",
+                                px: 3,
+                                "&:hover": {
+                                    backgroundColor: "#ba343b",
+                                    color: "white",
+                                },
+                            }}
                         >
                             Add Data Manually
                         </Button>
+
                         <Button
                             onClick={handleSendFiles}
-                            variant="contained"
+                            variant="outlined"
                             disabled={!chooseCategory || selectedFiles.length === 0}
-                            sx={{ bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
-                            fullWidth={{ xs: true, sm: false }}
+                            sx={{
+                                fontWeight: "bold",
+                                color: "#ba343b",
+                                borderColor: "#ba343b",
+                                borderRadius: "30px",
+                                px: 3,
+                                "&:hover": {
+                                    backgroundColor: "#ba343b",
+                                    color: "white",
+                                },
+                            }}
                         >
                             Submit
                         </Button>
@@ -445,25 +463,46 @@ const AllFiles = () => {
             <Box sx={{ mt: 2, height: calculateDataTableHeight() }}>
                 <DataTable refreshData={refreshData} searchTerm={searchTerm} category={chooseCategory} data={tableData} />
             </Box>
-            <Dialog open={success}
-                onClose={() => setSuccess(false)}
-                fullWidth
-                maxWidth="sm"
-                sx={{ "& .MuiDialog-paper": { width: "400px" } }}
-            >
-                <DialogContent sx={{ textAlign: "center", p: 1 }}>
-                    <Typography variant="h6">{successMessage}</Typography>
-                </DialogContent>
-            </Dialog>
-            <Dialog open={error}
-                onClose={() => setError(false)}
-                fullWidth
-                maxWidth="sm"
-                sx={{ "& .MuiDialog-paper": { width: "400px" } }}
 
+            <Dialog
+                open={statusDialogOpen}
+                onClose={() => setStatusDialogOpen(false)}
+                fullWidth
+                maxWidth="sm"
+                sx={{ "& .MuiDialog-paper": { width: "450px" } }}
             >
-                <DialogContent sx={{ textAlign: "center", p: 1 }}>
-                    <Typography variant="h6" color="error">{errorMessage}</Typography>
+                <DialogContent sx={{ textAlign: "center", p: 3 }}>
+                    {statusType === "success" ? (
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                            <CheckIcon sx={{ fontSize: 28, color: "#4caf50" }} />
+                            <Typography variant="h6" sx={{ fontSize: "18px", fontWeight: "bold" }}>
+                                {statusMessage}
+                            </Typography>
+                        </Box>
+                    ) : statusType === "error" ? (
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                            <ClearIcon sx={{ fontSize: 28, color: "#f44336" }} />
+                            <Typography variant="h6" sx={{ fontSize: "18px", fontWeight: "bold" }}>
+                                {statusMessage}
+                            </Typography>
+                        </Box>
+                    ) : uploading ? (
+                        <Typography variant="h6" sx={{ fontSize: "18px", fontWeight: "bold" }}>
+                            Uploading File...
+                        </Typography>
+                    ) : null}
+
+                    {uploading && (
+                        <LinearProgress
+                            sx={{
+                                mt: 3,
+                                "& .MuiLinearProgress-bar": {
+                                    backgroundColor: "#ba343b",
+                                },
+                                backgroundColor: "#ffccd0",
+                            }}
+                        />
+                    )}
                 </DialogContent>
             </Dialog>
 
@@ -473,7 +512,7 @@ const AllFiles = () => {
                 maxWidth="lg"
                 fullWidth
             >
-                <DialogTitle>Add Customer Manually</DialogTitle>
+                <DialogTitle sx={{ color: "#ba343b", fontWeight: "bold", fontSize: "18px" }}>Add Customer Manually</DialogTitle>
                 <DialogContent>
                     <Table size="small">
                         <TableHead>
@@ -507,82 +546,82 @@ const AllFiles = () => {
                                             size="small"
                                             value={row.name}
                                             onChange={(e) => handleManualInputChange(e, index, "name")}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TextField
-                                                size="small"
-                                                value={row.email}
-                                                onChange={(e) => handleManualInputChange(e, index, "email")}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TextField
-                                                size="small"
-                                                value={row.phoneNumber}
-                                                onChange={(e) => handleManualInputChange(e, index, "phoneNumber")}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TextField
-                                                size="small"
-                                                value={row.designation}
-                                                onChange={(e) => handleManualInputChange(e, index, "designation")}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TextField
-                                                size="small"
-                                                value={row.address}
-                                                onChange={(e) => handleManualInputChange(e, index, "address")}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TextField
-                                                size="small"
-                                                value={row.companyName}
-                                                onChange={(e) => handleManualInputChange(e, index, "companyName")}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <TextField
-                                                size="small"
-                                                value={row.industryType}
-                                                onChange={(e) => handleManualInputChange(e, index, "industryType")}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <IconButton onClick={() => handleRemoveManualRow(index)}
-                                                color="error">
-                                                <CloseRounded />
-                                            </IconButton>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                        <Box mt={2}>
-                            <Button
-                                onClick={handleAddManualRow}
-                            >
-                                Add Row
-                            </Button>
-                        </Box>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={handleCloseAddManualDialog}>Cancel</Button>
-                        <Button
-                            variant="contained"
-                            sx={{ bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
-                            onClick={handleSaveManualData}
-                            disabled={!chooseCategory}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            value={row.email}
+                                            onChange={(e) => handleManualInputChange(e, index, "email")}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            value={row.phoneNumber}
+                                            onChange={(e) => handleManualInputChange(e, index, "phoneNumber")}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            value={row.designation}
+                                            onChange={(e) => handleManualInputChange(e, index, "designation")}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            value={row.address}
+                                            onChange={(e) => handleManualInputChange(e, index, "address")}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            value={row.companyName}
+                                            onChange={(e) => handleManualInputChange(e, index, "companyName")}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <TextField
+                                            size="small"
+                                            value={row.industryType}
+                                            onChange={(e) => handleManualInputChange(e, index, "industryType")}
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <IconButton onClick={() => handleRemoveManualRow(index)}
+                                            color="error">
+                                            <CloseRounded />
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                    <Box mt={2}>
+                        <Button sx={{ color: "#ba343b", fontWeight: "bold" }}
+                            onClick={handleAddManualRow}
                         >
-                            Save
+                            Add Row
                         </Button>
-                    </DialogActions>
-                </Dialog>
-            </Box>
-        );
-    };
-    
-    export default AllFiles;
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseAddManualDialog} sx={{ color: "#ba343b" }}>Cancel</Button>
+                    <Button
+                        variant="contained"
+                        sx={{ borderRadius: "20px", bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
+                        onClick={handleSaveManualData}
+                        disabled={!chooseCategory}
+                    >
+                        Save
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Box>
+    );
+};
+
+export default AllFiles;
