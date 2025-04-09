@@ -366,7 +366,7 @@ const AllFiles = () => {
                                 p: 2,
                                 borderRadius: "16px",
                                 background: "linear-gradient(145deg, #f3f3f3, #ffffff)",
-                                mb: 2, // Add some margin below the category select
+                                mb: 2,
                             }}
                         >
                             <FormControl fullWidth size="small">
