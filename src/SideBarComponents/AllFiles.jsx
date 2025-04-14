@@ -14,6 +14,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 
 const AllFiles = () => {
     const [chooseCategory, setChoosecategory] = useState("");
+    const [chooseCategoryWise, setChooseCategoryWise] = useState("");
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [refreshData, setRefreshData] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -66,11 +67,6 @@ const AllFiles = () => {
     };
 
     const handleUploadButtonClick = () => {
-        if (!chooseCategory) {
-            setErrorMessage("Please select a category first.");
-            setError(true);
-            return;
-        }
         fileInputRef.current.click();
     };
 
@@ -233,17 +229,17 @@ const AllFiles = () => {
                                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                                     <TuneIcon fontSize="small" />
                                     <Typography sx={{ color: "#a6a6a6", fontWeight: 500 }}>
-                                        Category wise
+                                       Filter category wise
                                     </Typography>
                                 </Box>
                             </InputLabel>
                             <Select
                                 labelId="category-choose"
                                 id="category-choose"
-                                value={chooseCategory}
+                                value={chooseCategoryWise}
                                 label="choose Category"
                                 onChange={(e) => {
-                                    setChoosecategory(e.target.value);
+                                    setChooseCategoryWise(e.target.value);
                                 }}
                             >
                                 {[
@@ -285,9 +281,8 @@ const AllFiles = () => {
                     onChange={handleFileChange}
                     style={{ display: "none" }}
                     ref={fileInputRef}
-                    accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    accept=".csv,text/csv"
                 />
-
                 <Dialog
                     open={openUploadDialog}
                     onClose={handleCloseUploadDialog}
@@ -324,7 +319,7 @@ const AllFiles = () => {
                             <InfoOutlinedIcon sx={{ color: "#d32f2f", mr: 2, fontSize: "30px" }} />
                             <Typography variant="body2" sx={{ flexGrow: 1, color: "#5f5f5f" }}>
                                 Before uploading, ensure your file contains any of the following headers:{" "}
-                                <b>Name, Email, Phone Number, Category, Designation, Address, Company Name, Industry Type.</b>{" "}
+                                <b>Name, Email, Phone Number, Designation, Address, Company Name, Industry Type.</b>{" "}
                                 Incorrect headers may lead to data processing errors.
                             </Typography>
                         </Box>
@@ -461,7 +456,7 @@ const AllFiles = () => {
             </Box>
 
             <Box sx={{ mt: 2, height: calculateDataTableHeight() }}>
-                <DataTable refreshData={refreshData} searchTerm={searchTerm} category={chooseCategory} data={tableData} />
+                <DataTable refreshData={refreshData} searchTerm={searchTerm} category={chooseCategoryWise} data={tableData} />
             </Box>
 
             <Dialog
