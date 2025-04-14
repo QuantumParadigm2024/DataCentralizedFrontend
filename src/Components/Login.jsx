@@ -143,7 +143,7 @@ const Login = () => {
                         variant="outlined"
                     >
                         <div>
-                            <Typography level="h3" component="h1" sx={{ fontWeight: "bold", color: "#b4b4b4", textAlign: 'center', mb: 1 }}>
+                            <Typography level="h3" component="h1" sx={{ fontSize: "24px", fontWeight: "500", color: "#b4b4b4", textAlign: 'center', mb: 1 }}>
                                 <b>Welcome Back!</b>
                             </Typography>
                             <Typography level="body-sm" sx={{ textAlign: "center" }}>
