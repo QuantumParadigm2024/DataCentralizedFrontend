@@ -635,6 +635,16 @@ const AllFolders = () => {
                                                             event.stopPropagation();
                                                             toggleFileStar(file.id);
                                                         }}
+                                                        disableRipple
+                                                        disableFocusRipple
+                                                        sx={{
+                                                            '&:hover': {
+                                                                backgroundColor: 'transparent',
+                                                            },
+                                                            '&.MuiIconButton-root': {
+                                                                padding: 0,
+                                                            },
+                                                        }}
                                                     >
                                                         {starredFiles.some(fav => fav.id === file.id) ? (
                                                             <Star sx={{ color: "gold", mr: 8 }} />
@@ -765,7 +775,18 @@ const AllFolders = () => {
                                                     onClick={(event) => {
                                                         event.stopPropagation();
                                                         toggleFolderStar(folder.entityId);
-                                                    }}>
+                                                    }}
+                                                    disableRipple
+                                                    disableFocusRipple
+                                                    sx={{
+                                                        '&:hover': {
+                                                            backgroundColor: 'transparent',
+                                                        },
+                                                        '&.MuiIconButton-root': {
+                                                            padding: 0,
+                                                        },
+                                                    }}
+                                                >
                                                     {starredFolders.some(fav => fav.entityId === folder.entityId) ? (
                                                         <Star sx={{ color: "gold", mr: 8 }} />
                                                     ) : (
