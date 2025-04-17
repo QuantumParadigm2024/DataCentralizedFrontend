@@ -262,7 +262,7 @@ const AllFolders = () => {
     const [uploadOpen, setUploadOpen] = useState(false);
 
     const MAX_SMALL_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-    const MAX_LARGE_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
+    const MAX_LARGE_FILE_SIZE = 50 * 1024 * 1024 * 1024; // 50GB
 
     const handleFileValidation = (files, maxSize) => {
         let validFiles = [];
@@ -306,7 +306,7 @@ const AllFolders = () => {
         await uploadFiles(validFiles, entityId, "/planotech-inhouse/uploadFile");
     };
 
-    // ✅ Large File Upload (≤1GB)
+    // ✅ Large File Upload (≤50GB)
     const handleLargeFileUpload = async (event, entityId) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
@@ -447,6 +447,16 @@ const AllFolders = () => {
         }
     };
 
+    const formatFileSize = (bytes) => {
+        if (bytes >= 1024 ** 3) {
+            return (bytes / (1024 ** 3)).toFixed(2) + ' GB';
+        } else if (bytes >= 1024 ** 2) {
+            return (bytes / (1024 ** 2)).toFixed(2) + ' MB';
+        } else {
+            return Math.round(bytes / 1024) + ' KB';
+        }
+    };
+
     return (
         <>
             <Box>
@@ -530,7 +540,7 @@ const AllFolders = () => {
                                     </MenuItem>
                                     <MenuItem>
                                         <label style={{ fontWeight: "bold", color: "grey", fontSize: "12.5px" }}>
-                                            Large File (≤1gb)
+                                            Large File (≤50gb)
                                             <Input
                                                 type="file"
                                                 sx={{ display: "none" }}
@@ -627,7 +637,7 @@ const AllFolders = () => {
                                                     {new Date(file.time).toLocaleString()}
                                                 </Typography>
                                                 <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
-                                                    {Math.round(file.fileSize / 1024)} KB
+                                                    {formatFileSize(file.fileSize)}
                                                 </Typography>
                                                 <Tooltip title="Star this folder" arrow>
                                                     <IconButton
