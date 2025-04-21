@@ -21,6 +21,9 @@ import FolderZipIcon from '@mui/icons-material/FolderZip';
 import ImageIcon from '@mui/icons-material/Image';
 import ClearIcon from '@mui/icons-material/Clear';
 import CheckIcon from '@mui/icons-material/Check';
+import ShareIcon from '@mui/icons-material/Share';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ClickAwayListener from '@mui/material/ClickAwayListener';
 
 const AllFolders = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -57,10 +60,6 @@ const AllFolders = () => {
 
     const encryptedToken = sessionStorage.getItem("dc");
     const token = decryptToken(encryptedToken);
-
-    useEffect(() => {
-        fetchFolders();
-    }, []);
 
     const toggleFolderStar = async (entityId) => {
         try {
@@ -146,6 +145,10 @@ const AllFolders = () => {
             }
         };
         fetchStarredFoldersandFiles();
+    }, []);
+
+    useEffect(() => {
+        fetchFolders();
     }, []);
 
     const fetchFolders = async (newPageNo = pageNo) => {
@@ -457,6 +460,15 @@ const AllFolders = () => {
         }
     };
 
+    const [openTooltipId, setOpenTooltipId] = useState(null);
+    const [copiedLinkId, setCopiedLinkId] = useState(null);
+
+    const handleCopyLink = (fileLink, id) => {
+        navigator.clipboard.writeText(fileLink);
+        setCopiedLinkId(id);
+        setTimeout(() => setCopiedLinkId(null), 1500);
+    };
+
     return (
         <>
             <Box>
@@ -570,7 +582,7 @@ const AllFolders = () => {
                                 <Box sx={{ width: '100%' }}>
                                     <Box sx={{
                                         display: 'grid',
-                                        gridTemplateColumns: '2.5fr 2.5fr 1.5fr 1.5fr 1fr',
+                                        gridTemplateColumns: '3.5fr 2.5fr 1.5fr 2.5fr 1fr 1fr 1fr',
                                         fontWeight: 'bold',
                                         bgcolor: '#f5f5f5',
                                         p: 1,
@@ -580,8 +592,10 @@ const AllFolders = () => {
                                         <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Size</Typography>
-                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Add Favourites</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Share</Typography>
                                     </Box>
                                     <List>
                                         {filteredFiles.map((file, index) => (
@@ -589,7 +603,7 @@ const AllFolders = () => {
                                                 key={index}
                                                 sx={{
                                                     display: 'grid',
-                                                    gridTemplateColumns: '2.5fr 2.5fr 1.5fr 1.5fr 1fr',
+                                                    gridTemplateColumns: '3.5fr 2.5fr 1.5fr 2.5fr 1fr 1fr 1fr',
                                                     alignItems: 'center',
                                                     p: 1.5,
                                                     borderBottom: '1px solid #ddd',
@@ -639,41 +653,130 @@ const AllFolders = () => {
                                                 <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
                                                     {formatFileSize(file.fileSize)}
                                                 </Typography>
-                                                <Tooltip title="Star this folder" arrow>
-                                                    <IconButton
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            toggleFileStar(file.id);
-                                                        }}
-                                                        disableRipple
-                                                        disableFocusRipple
-                                                        sx={{
-                                                            '&:hover': {
-                                                                backgroundColor: 'transparent',
-                                                            },
-                                                            '&.MuiIconButton-root': {
-                                                                padding: 0,
-                                                            },
-                                                        }}
-                                                    >
-                                                        {starredFiles.some(fav => fav.id === file.id) ? (
-                                                            <Star sx={{ color: "gold", mr: 8 }} />
-                                                        ) : (
-                                                            <StarBorder sx={{ mr: 8 }} />
-                                                        )}
-                                                    </IconButton>
+                                                <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
+                                                    {file.createdBy}
+                                                </Typography>
+                                                <Tooltip>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 0.5 }}>
+                                                        <IconButton
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                toggleFileStar(file.id);
+                                                            }}
+                                                            disableRipple
+                                                            disableFocusRipple
+                                                            sx={{
+                                                                '&:hover': {
+                                                                    backgroundColor: 'transparent',
+                                                                },
+                                                                '&.MuiIconButton-root': {
+                                                                    padding: 0,
+                                                                },
+                                                            }}
+                                                        >
+                                                            {starredFiles.some(fav => fav.id === file.id) ? (
+                                                                <Star sx={{ color: "gold" }} />
+                                                            ) : (
+                                                                <StarBorder />
+                                                            )}
+                                                        </IconButton>
+                                                    </Box>
                                                 </Tooltip>
                                                 <Tooltip>
-                                                    <IconButton
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            handleDeleteFile(file, openFolder);
-                                                        }}
-                                                        sx={{ color: "gray", mr: 7 }}
-                                                    >
-                                                        <DeleteIcon />
-                                                    </IconButton>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 1 }}>
+                                                        <IconButton
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                handleDeleteFile(file, openFolder);
+                                                            }}
+                                                            sx={{ color: "gray" }}
+                                                        >
+                                                            <DeleteIcon />
+                                                        </IconButton>
+                                                    </Box>
                                                 </Tooltip>
+                                                <ClickAwayListener onClickAway={() => setOpenTooltipId(null)}>
+                                                    <Box
+                                                        onMouseEnter={() => setOpenTooltipId(file.id)}
+                                                        onMouseLeave={() => setOpenTooltipId(null)}
+                                                        sx={{ display: 'flex', justifyContent: 'flex-start' }}
+                                                    >
+                                                        <Tooltip
+                                                            arrow
+                                                            open={openTooltipId === file.id}
+                                                            placement="top"
+                                                            componentsProps={{
+                                                                tooltip: {
+                                                                    sx: {
+                                                                        backgroundColor: '#fff',
+                                                                        color: '#333',
+                                                                        p: 1.2,
+                                                                        borderRadius: 2,
+                                                                        boxShadow: 3,
+                                                                        maxWidth: 350,
+                                                                    },
+                                                                },
+                                                                arrow: {
+                                                                    sx: {
+                                                                        color: '#fff',
+                                                                    },
+                                                                },
+                                                            }}
+                                                            title={
+                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                                    <Typography
+                                                                        variant="caption"
+                                                                        sx={{
+                                                                            fontSize: '12px',
+                                                                            fontWeight: 'bold',
+                                                                            color: 'grey',
+                                                                            wordBreak: 'break-all',
+                                                                            flex: 1,
+                                                                        }}
+                                                                    >
+                                                                        {file.fileLink}
+                                                                    </Typography>
+                                                                    <Button
+                                                                        variant="outlined"
+                                                                        size="small"
+                                                                        startIcon={<ContentCopyIcon />}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleCopyLink(file.fileLink, file.id);
+                                                                        }}
+                                                                        sx={{
+                                                                            textTransform: 'none',
+                                                                            fontSize: '12px',
+                                                                            fontWeight: 'bold',
+                                                                            color: '#ba343b',
+                                                                            border: '0.5px solid #ba343b',
+                                                                            whiteSpace: 'nowrap',
+                                                                        }}
+                                                                    >
+                                                                        {copiedLinkId === file.id ? 'Copied!' : 'Copy'}
+                                                                    </Button>
+                                                                </Box>
+                                                            }
+                                                            PopperProps={{
+                                                                modifiers: [
+                                                                    {
+                                                                        name: 'offset',
+                                                                        options: {
+                                                                            offset: [0, 0],
+                                                                        },
+                                                                    },
+                                                                ],
+                                                            }}
+                                                        >
+                                                            <IconButton
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                sx={{ color: 'gray' }}
+                                                            >
+                                                                <ShareIcon />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    </Box>
+                                                </ClickAwayListener>
                                             </ListItem>
                                         ))}
                                     </List>
@@ -725,7 +828,7 @@ const AllFolders = () => {
                             <Box sx={{ width: '100%', mt: 2 }}>
                                 <Box sx={{
                                     display: 'grid',
-                                    gridTemplateColumns: '2.5fr 2.5fr 1.5fr 1.5fr 1fr',
+                                    gridTemplateColumns: '3.5fr 2.5fr 2.5fr 1fr 1fr',
                                     fontWeight: 'bold',
                                     bgcolor: '#f5f5f5',
                                     p: 1,
@@ -735,7 +838,7 @@ const AllFolders = () => {
                                     <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Add Favourites</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
                                 </Box>
                                 <List>
@@ -744,7 +847,7 @@ const AllFolders = () => {
                                             key={folder.entityId}
                                             sx={{
                                                 display: 'grid',
-                                                gridTemplateColumns: '2.5fr 2.5fr 1.5fr 1.5fr 1fr',
+                                                gridTemplateColumns: '3.5fr 2.5fr 2.5fr 1fr 1fr',
                                                 alignItems: 'center',
                                                 p: 1.5,
                                                 borderBottom: '1px solid #ddd',
@@ -780,40 +883,44 @@ const AllFolders = () => {
                                             <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
                                                 {folder.createdBy ? folder.createdBy : "N/A"}
                                             </Typography>
-                                            <Tooltip title="Star this folder" arrow>
-                                                <IconButton
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        toggleFolderStar(folder.entityId);
-                                                    }}
-                                                    disableRipple
-                                                    disableFocusRipple
-                                                    sx={{
-                                                        '&:hover': {
-                                                            backgroundColor: 'transparent',
-                                                        },
-                                                        '&.MuiIconButton-root': {
-                                                            padding: 0,
-                                                        },
-                                                    }}
-                                                >
-                                                    {starredFolders.some(fav => fav.entityId === folder.entityId) ? (
-                                                        <Star sx={{ color: "gold", mr: 8 }} />
-                                                    ) : (
-                                                        <StarBorder sx={{ mr: 8 }} />
-                                                    )}
-                                                </IconButton>
+                                            <Tooltip>
+                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                                                    <IconButton
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            toggleFolderStar(folder.entityId);
+                                                        }}
+                                                        disableRipple
+                                                        disableFocusRipple
+                                                        sx={{
+                                                            '&:hover': {
+                                                                backgroundColor: 'transparent',
+                                                            },
+                                                            '&.MuiIconButton-root': {
+                                                                padding: 0,
+                                                            },
+                                                        }}
+                                                    >
+                                                        {starredFolders.some(fav => fav.entityId === folder.entityId) ? (
+                                                            <Star sx={{ color: "gold" }} />
+                                                        ) : (
+                                                            <StarBorder />
+                                                        )}
+                                                    </IconButton>
+                                                </Box>
                                             </Tooltip>
                                             <Tooltip>
-                                                <IconButton
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        handleDeleteFolder(folder.entityId, event);
-                                                    }}
-                                                    sx={{ color: "gray", mr: 7 }}
-                                                >
-                                                    <DeleteIcon />
-                                                </IconButton>
+                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 1 }}>
+                                                    <IconButton
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            handleDeleteFolder(folder.entityId, event);
+                                                        }}
+                                                        sx={{ color: "gray" }}
+                                                    >
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                </Box>
                                             </Tooltip>
                                         </ListItem>
                                     ))}

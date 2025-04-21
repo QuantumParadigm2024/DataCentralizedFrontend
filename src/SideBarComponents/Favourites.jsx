@@ -17,6 +17,9 @@ import InsertChartIcon from '@mui/icons-material/InsertChart';
 import FolderZipIcon from '@mui/icons-material/FolderZip';
 import { Star } from "@mui/icons-material";
 import ImageIcon from '@mui/icons-material/Image';
+import ShareIcon from '@mui/icons-material/Share';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ClickAwayListener from '@mui/material/ClickAwayListener';
 
 const Favourites = () => {
     const [starredFolders, setStarredFolders] = useState([]);
@@ -135,6 +138,25 @@ const Favourites = () => {
         }
     };
 
+    const formatFileSize = (bytes) => {
+        if (bytes >= 1024 ** 3) {
+            return (bytes / (1024 ** 3)).toFixed(2) + ' GB';
+        } else if (bytes >= 1024 ** 2) {
+            return (bytes / (1024 ** 2)).toFixed(2) + ' MB';
+        } else {
+            return Math.round(bytes / 1024) + ' KB';
+        }
+    };
+
+    const [openTooltipId, setOpenTooltipId] = useState(null);
+    const [copiedLinkId, setCopiedLinkId] = useState(null);
+
+    const handleCopyLink = (fileLink, id) => {
+        navigator.clipboard.writeText(fileLink);
+        setCopiedLinkId(id);
+        setTimeout(() => setCopiedLinkId(null), 1500);
+    };
+
     return (
         <Box sx={{ mt: 1 }}>
             <Typography variant="h6" sx={{ fontSize: "18px", fontWeight: "bold" }}>
@@ -245,7 +267,7 @@ const Favourites = () => {
                             <Box sx={{ width: '100%', mt: 2 }}>
                                 <Box sx={{
                                     display: 'grid',
-                                    gridTemplateColumns: '2fr 1fr 1fr',
+                                    gridTemplateColumns: '2.5fr 2fr 1fr 1.5fr 1fr',
                                     fontWeight: 'bold',
                                     bgcolor: '#f5f5f5',
                                     p: 1,
@@ -255,6 +277,8 @@ const Favourites = () => {
                                     <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
                                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Size</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Share</Typography>
                                 </Box>
                                 <List>
                                     {files[openFolder]?.map((file) => (
@@ -262,7 +286,7 @@ const Favourites = () => {
                                             key={file.id}
                                             sx={{
                                                 display: 'grid',
-                                                gridTemplateColumns: '2fr 1fr 1fr',
+                                                gridTemplateColumns: '2.5fr 2fr 1fr 1.5fr 1fr',
                                                 alignItems: 'center',
                                                 p: 1.5,
                                                 borderBottom: '1px solid #ddd',
@@ -273,7 +297,6 @@ const Favourites = () => {
                                             onClick={() => {
                                                 const imageExtensions = ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "webp"];
                                                 const fileExtension = file.fileName.split('.').pop().toLowerCase();
-
                                                 if (file.type === "application/pdf") {
                                                     window.open(file.fileLink, '_blank');
                                                 } else if (imageExtensions.includes(fileExtension)) {
@@ -309,9 +332,94 @@ const Favourites = () => {
                                             <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
                                                 {new Date(file.time).toLocaleString()}
                                             </Typography>
-                                            <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
-                                                {Math.round(file.fileSize / 1024)} KB
+                                            <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
+                                                {formatFileSize(file.fileSize)}
                                             </Typography>
+                                            <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
+                                                {file.createdBy}
+                                            </Typography>
+                                            <ClickAwayListener onClickAway={() => setOpenTooltipId(null)}>
+                                                <Box
+                                                    onMouseEnter={() => setOpenTooltipId(file.id)}
+                                                    onMouseLeave={() => setOpenTooltipId(null)}
+                                                    sx={{ display: 'flex', justifyContent: 'flex-start' }}
+                                                >
+                                                    <Tooltip
+                                                        arrow
+                                                        open={openTooltipId === file.id}
+                                                        placement="top"
+                                                        componentsProps={{
+                                                            tooltip: {
+                                                                sx: {
+                                                                    backgroundColor: '#fff',
+                                                                    color: '#333',
+                                                                    p: 1.2,
+                                                                    borderRadius: 2,
+                                                                    boxShadow: 3,
+                                                                    maxWidth: 350,
+                                                                },
+                                                            },
+                                                            arrow: {
+                                                                sx: {
+                                                                    color: '#fff',
+                                                                },
+                                                            },
+                                                        }}
+                                                        title={
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                                <Typography
+                                                                    variant="caption"
+                                                                    sx={{
+                                                                        fontSize: '12px',
+                                                                        fontWeight: 'bold',
+                                                                        color: 'grey',
+                                                                        wordBreak: 'break-all',
+                                                                        flex: 1,
+                                                                    }}
+                                                                >
+                                                                    {file.fileLink}
+                                                                </Typography>
+                                                                <Button
+                                                                    variant="outlined"
+                                                                    size="small"
+                                                                    startIcon={<ContentCopyIcon />}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleCopyLink(file.fileLink, file.id);
+                                                                    }}
+                                                                    sx={{
+                                                                        textTransform: 'none',
+                                                                        fontSize: '12px',
+                                                                        fontWeight: 'bold',
+                                                                        color: '#ba343b',
+                                                                        border: '0.5px solid #ba343b',
+                                                                        whiteSpace: 'nowrap',
+                                                                    }}
+                                                                >
+                                                                    {copiedLinkId === file.id ? 'Copied!' : 'Copy'}
+                                                                </Button>
+                                                            </Box>
+                                                        }
+                                                        PopperProps={{
+                                                            modifiers: [
+                                                                {
+                                                                    name: 'offset',
+                                                                    options: {
+                                                                        offset: [0, 0],
+                                                                    },
+                                                                },
+                                                            ],
+                                                        }}
+                                                    >
+                                                        <IconButton
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            sx={{ color: 'gray' }}
+                                                        >
+                                                            <ShareIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Box>
+                                            </ClickAwayListener>
                                         </ListItem>
                                     ))}
                                 </List>
@@ -335,7 +443,7 @@ const Favourites = () => {
                     <Box sx={{ width: '100%', mt: 2 }}>
                         <Box sx={{
                             display: 'grid',
-                            gridTemplateColumns: '1.5fr 1.5fr 1.5fr 0.5fr',
+                            gridTemplateColumns: '2.5fr 2.5fr 1.5fr 1.5fr 1fr 1fr',
                             fontWeight: 'bold',
                             bgcolor: '#f5f5f5',
                             p: 1,
@@ -345,7 +453,9 @@ const Favourites = () => {
                             <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
                             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
                             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Size</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
                             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Share</Typography>
                         </Box>
                         <List>
                             {starredFiles.map((file) => (
@@ -353,7 +463,7 @@ const Favourites = () => {
                                     key={file.id}
                                     sx={{
                                         display: 'grid',
-                                        gridTemplateColumns: '1.5fr 1.5fr 1.5fr 0.5fr',
+                                        gridTemplateColumns: '2.5fr 2.5fr 1.5fr 1.5fr 1fr 1fr',
                                         alignItems: 'center',
                                         p: 1.5,
                                         borderBottom: '1px solid #ddd',
@@ -364,7 +474,6 @@ const Favourites = () => {
                                     onClick={() => {
                                         const imageExtensions = ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "webp"];
                                         const fileExtension = file.fileName.split('.').pop().toLowerCase();
-
                                         if (file.type === "application/pdf") {
                                             window.open(file.fileLink, '_blank');
                                         } else if (imageExtensions.includes(fileExtension)) {
@@ -400,8 +509,11 @@ const Favourites = () => {
                                     <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
                                         {new Date(file.time).toLocaleString()}
                                     </Typography>
-                                    <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
-                                        {Math.round(file.fileSize / 1024)} KB
+                                    <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
+                                        {formatFileSize(file.fileSize)}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
+                                        {file.createdBy}
                                     </Typography>
                                     <Star
                                         sx={{ color: "gold", cursor: "pointer" }}
@@ -410,6 +522,87 @@ const Favourites = () => {
                                             handleFileUnstar(file.id);
                                         }}
                                     />
+                                    <ClickAwayListener onClickAway={() => setOpenTooltipId(null)}>
+                                        <Box
+                                            onMouseEnter={() => setOpenTooltipId(file.id)}
+                                            onMouseLeave={() => setOpenTooltipId(null)}
+                                        >
+                                            <Tooltip
+                                                arrow
+                                                open={openTooltipId === file.id}
+                                                placement="top"
+                                                componentsProps={{
+                                                    tooltip: {
+                                                        sx: {
+                                                            backgroundColor: '#fff',
+                                                            color: '#333',
+                                                            p: 1.2,
+                                                            borderRadius: 2,
+                                                            boxShadow: 3,
+                                                            maxWidth: 350,
+                                                        },
+                                                    },
+                                                    arrow: {
+                                                        sx: {
+                                                            color: '#fff',
+                                                        },
+                                                    },
+                                                }}
+                                                title={
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                        <Typography
+                                                            variant="caption"
+                                                            sx={{
+                                                                fontSize: '12px',
+                                                                fontWeight: 'bold',
+                                                                color: 'grey',
+                                                                wordBreak: 'break-all',
+                                                                flex: 1,
+                                                            }}
+                                                        >
+                                                            {file.fileLink}
+                                                        </Typography>
+                                                        <Button
+                                                            variant="outlined"
+                                                            size="small"
+                                                            startIcon={<ContentCopyIcon />}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCopyLink(file.fileLink, file.id);
+                                                            }}
+                                                            sx={{
+                                                                textTransform: 'none',
+                                                                fontSize: '12px',
+                                                                fontWeight: 'bold',
+                                                                color: '#ba343b',
+                                                                border: '0.5px solid #ba343b',
+                                                                whiteSpace: 'nowrap',
+                                                            }}
+                                                        >
+                                                            {copiedLinkId === file.id ? 'Copied!' : 'Copy'}
+                                                        </Button>
+                                                    </Box>
+                                                }
+                                                PopperProps={{
+                                                    modifiers: [
+                                                        {
+                                                            name: 'offset',
+                                                            options: {
+                                                                offset: [0, 0],
+                                                            },
+                                                        },
+                                                    ],
+                                                }}
+                                            >
+                                                <IconButton
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    sx={{ color: 'gray', mr: 7 }}
+                                                >
+                                                    <ShareIcon />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Box>
+                                    </ClickAwayListener>
                                 </ListItem>
                             ))}
                         </List>
