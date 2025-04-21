@@ -1,36 +1,19 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Box, Grid, IconButton, Drawer, useMediaQuery, useTheme } from "@mui/material";
+import React, { useRef, useEffect, useState } from "react";
+import { Box, Grid, IconButton, Drawer, useMediaQuery, useTheme, } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import { Outlet } from "react-router-dom";
 import SideBar from "./SideBar";
-import AllFiles from "../SideBarComponents/AllFiles";
-import Logo from "../Assets/Planotech Logo Black.png";
-import AllFolders from "../SideBarComponents/AllFolders";
 import NavColorCode from "./NavColorCode";
-import Profile from "../SideBarComponents/Profile";
-import Favourites from "../SideBarComponents/Favourites";
+import Logo from "../Assets/Planotech Logo Black.png";
 
 const Dashboard = () => {
-    const [selectedContent, setSelectedContent] = useState("allFiles");
     const [drawerOpen, setDrawerOpen] = useState(true);
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [sidebarWidth, setSidebarWidth] = useState(200);
     const headerRef = useRef(null);
     const contentRef = useRef(null);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-    const [mobileOpen, setMobileOpen] = useState(false);
-    const [sidebarWidth, setSidebarWidth] = useState(200);
-
-    const renderContent = () => {
-        switch (selectedContent) {
-            case "allFolders":
-                return <AllFolders />;
-            case "favourites":
-                return <Favourites />;
-            case "profile":
-                return <Profile />;
-            default:
-                return <AllFiles />;
-        }
-    };
 
     useEffect(() => {
         if (headerRef.current && contentRef.current) {
@@ -45,6 +28,7 @@ const Dashboard = () => {
 
     return (
         <Grid container sx={{ width: "100%", height: "100vh" }}>
+            {/* Header */}
             <Box
                 ref={headerRef}
                 sx={{
@@ -72,19 +56,15 @@ const Dashboard = () => {
                     <img
                         src={Logo}
                         alt="Company Logo"
-                        style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "contain",
-                        }}
+                        style={{ width: "100%", height: "100%", objectFit: "contain" }}
                     />
                 </Box>
-
                 <Box sx={{ width: "100%", height: "100%" }}>
                     <NavColorCode />
                 </Box>
             </Box>
 
+            {/* Content */}
             <Box ref={contentRef} sx={{ width: "100%", height: "100%" }}>
                 {!isMobile && (
                     <Grid
@@ -99,7 +79,6 @@ const Dashboard = () => {
                         }}
                     >
                         <SideBar
-                            setSelectedContent={setSelectedContent}
                             drawerOpen={drawerOpen}
                             setDrawerOpen={setDrawerOpen}
                         />
@@ -112,7 +91,6 @@ const Dashboard = () => {
                     sx={{ display: { md: "none" } }}
                 >
                     <SideBar
-                        setSelectedContent={setSelectedContent}
                         drawerOpen={drawerOpen}
                         setDrawerOpen={setDrawerOpen}
                     />
@@ -143,7 +121,8 @@ const Dashboard = () => {
                             <MenuIcon />
                         </IconButton>
                     )}
-                    {renderContent()}
+                    {/* 👇 Load nested content */}
+                    <Outlet />
                 </Grid>
             </Box>
         </Grid>
