@@ -615,7 +615,6 @@ const AllFiles = () => {
                             variant="contained"
                             sx={{ borderRadius: "20px", bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
                             onClick={handleSaveManualData}
-                            disabled={!chooseCategory}
                         >
                             Save
                         </Button>
