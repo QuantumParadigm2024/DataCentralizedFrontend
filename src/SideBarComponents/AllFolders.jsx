@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
-import { LinearProgress, Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton, Menu, MenuItem } from "@mui/material";
+import { LinearProgress, Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton, Menu, MenuItem, ButtonGroup } from "@mui/material";
 import { Search, ViewList, GridView, Folder as FolderIcon, UploadFile, Star, StarBorder } from "@mui/icons-material";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
 import axiosInstance from "../Helper/AxiosInstance";
@@ -148,12 +148,12 @@ const AllFolders = () => {
     }, []);
 
     useEffect(() => {
-        fetchFolders();
+        fetchFolders('IT');
     }, []);
 
-    const fetchFolders = async (newPageNo = pageNo) => {
+    const fetchFolders = async (category = 'IT', newPageNo = pageNo) => {
         try {
-            const response = await axiosInstance.get(`/planotech-inhouse/getFolders`, {
+            const response = await axiosInstance.get(`/planotech-inhouse/getFolders/${category}`, {
                 params: {
                     pageNo: newPageNo,
                     pageSize: pageSize
@@ -161,7 +161,8 @@ const AllFolders = () => {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
-            });
+            }
+            );
             const fetchedFolders = response.data.content || [];
             setFolders(fetchedFolders);
             setTotalPages(response.data.totalPages || Math.ceil(fetchedFolders.length / pageSize));
@@ -469,6 +470,8 @@ const AllFolders = () => {
         setTimeout(() => setCopiedLinkId(null), 1500);
     };
 
+    const [selectedCategory, setSelectedCategory] = useState('IT');
+
     return (
         <>
             <Box>
@@ -510,6 +513,49 @@ const AllFolders = () => {
                         )}
                     </Grid>
                 </Box>
+
+                {!openFolder && (
+                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                borderRadius: '18px',
+                                overflow: 'hidden',
+                                border: '1px solid #c4c4c4',
+                                maxWidth: 400,
+                            }}
+                        >
+                            {['IT', 'Design', 'Marketing'].map((label) => (
+                                <Button
+                                    key={label}
+                                    variant={selectedCategory === label ? 'contained' : 'outlined'}
+                                    onClick={() => {
+                                        setSelectedCategory(label);
+                                        fetchFolders(label);
+                                    }}
+                                    sx={{
+                                        flex: 1,
+                                        px: 5,
+                                        py: 1,
+                                        borderRadius: 0,
+                                        fontWeight: 'bold',
+                                        color: selectedCategory === label ? '#ba343b' : '#ba343b',
+                                        backgroundColor: selectedCategory === label ? '#d4d4d4' : 'transparent',
+                                        border: 'none',
+                                        '&:hover': {
+                                            backgroundColor: selectedCategory === label ? 'none' : '#f2f2f2',
+                                        },
+                                        '&:not(:last-of-type)': {
+                                            borderRight: '1px solid #c4c4c4',
+                                        },
+                                    }}
+                                >
+                                    {label}
+                                </Button>
+                            ))}
+                        </Box>
+                    </Box>
+                )}
 
                 {/* If a folder is open, show its content */}
                 {openFolder ? (
