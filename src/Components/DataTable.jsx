@@ -64,6 +64,10 @@ const DataTable = ({ data, refreshData, searchTerm, category }) => {
         return words.length > 2 ? words.slice(0, 2).join(" ") + " ..." : text;
     };
 
+    useEffect(() => {
+        fetchData(); 
+    }, [refreshData]);
+
     const fetchData = async (newPageNo = pageNo) => {
         setLoading(true);
         setError(null);
@@ -74,7 +78,7 @@ const DataTable = ({ data, refreshData, searchTerm, category }) => {
                 pageSize: pageSize,
             };
 
-            const response = await axiosInstance.get("planotech-inhouse/getAll/data", {
+            const response = await axiosInstance.get("/planotech-inhouse/getAll/data", {
                 params: params,
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -111,15 +115,13 @@ const DataTable = ({ data, refreshData, searchTerm, category }) => {
                 pageSize: pageSize,
             };
 
-            const response = await axiosInstance.get(
-                `/planotech-inhouse/get/data/${category}`,
-                {
-                    params: params,
-                    category: category,
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
+            const response = await axiosInstance.get(`/planotech-inhouse/get/data/${category}`, {
+                params: params,
+                category: category,
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
             );
 
             if (Array.isArray(response.data.content)) {

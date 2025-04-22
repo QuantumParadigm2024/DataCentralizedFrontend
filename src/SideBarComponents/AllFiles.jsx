@@ -52,6 +52,7 @@ const AllFiles = () => {
     const handleOpenUploadDialog = () => {
         setOpenUploadDialog(true);
     };
+
     const handleCloseUploadDialog = () => {
         setOpenUploadDialog(false);
         setSelectedFiles([]);
@@ -60,9 +61,10 @@ const AllFiles = () => {
     };
 
     const handleOpenaddManualDialog = () => {
-        handleCloseUploadDialog(false);
+        setOpenUploadDialog(false);
         setAddManualDialog(true);
     };
+    
     const handleCloseAddManualDialog = () => {
         setAddManualDialog(false);
     };
@@ -615,7 +617,6 @@ const AllFiles = () => {
                             variant="contained"
                             sx={{ borderRadius: "20px", bgcolor: '#ba343b', '&:hover': { bgcolor: '#9e2b31' } }}
                             onClick={handleSaveManualData}
-                            disabled={!chooseCategory}
                         >
                             Save
                         </Button>
