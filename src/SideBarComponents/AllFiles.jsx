@@ -52,6 +52,7 @@ const AllFiles = () => {
     const handleOpenUploadDialog = () => {
         setOpenUploadDialog(true);
     };
+
     const handleCloseUploadDialog = () => {
         setOpenUploadDialog(false);
         setSelectedFiles([]);
@@ -60,9 +61,10 @@ const AllFiles = () => {
     };
 
     const handleOpenaddManualDialog = () => {
-        handleCloseUploadDialog(false);
+        setOpenUploadDialog(false);
         setAddManualDialog(true);
     };
+    
     const handleCloseAddManualDialog = () => {
         setAddManualDialog(false);
     };
