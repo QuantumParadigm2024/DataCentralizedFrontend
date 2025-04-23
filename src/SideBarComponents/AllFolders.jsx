@@ -204,37 +204,6 @@ const AllFolders = () => {
     const [createFolderOpen, setCreateFolderOpen] = useState(false);
     const [creating, setCreating] = useState(false);
 
-    // const handleCreateFolder = async () => {
-    //     setOpen(false);
-    //     if (!folderName.trim()) {
-    //         setCreateFolder("Please enter a folder name");
-    //         setCreateFolderOpen(true);
-    //         return;
-    //     }
-
-    //     setCreating(true);
-    //     setCreateFolder("Creating folder...");
-    //     setCreateFolderOpen(true);
-
-    //     try {
-    //         await axiosInstance.post(`/planotech-inhouse/create/folder/${folderName}`, {}, {
-    //             headers: {
-    //                 Authorization: `Bearer ${token}`
-    //             }
-    //         });
-
-    //         setCreateFolder("✅ Folder created successfully!");
-    //         setFolderName("");
-    //         handleClose();
-    //         fetchFolders();
-    //     } catch (error) {
-    //         console.error("Error creating folder:", error);
-    //         setCreateFolder("❌ Failed to create folder");
-    //     } finally {
-    //         setCreating(false);
-    //     }
-    // };
-
     const handleCreateFolder = async () => {
         setOpen(false);
 
