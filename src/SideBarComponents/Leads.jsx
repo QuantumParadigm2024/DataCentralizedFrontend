@@ -42,7 +42,7 @@ const Leads = () => {
     const token = decryptToken(encryptedToken);
 
     useEffect(() => {
-        fetchLeadSearch();
+        fetchLeads(0);
     }, []);
 
     useEffect(() => {
@@ -51,12 +51,12 @@ const Leads = () => {
         } else {
             fetchLeads(pageNo);
         }
-    }, [searchTerm]);
+    }, [searchTerm, pageNo]);
 
     const fetchLeadSearch = async (pageNo) => {
         try {
             const response = await axiosInstance.get("/planotech-inhouse/search/leads", {
-                params: { searchText: searchTerm, pageNo },
+                params: { searchText: searchTerm, pageNo, pageSize },
                 headers: { Authorization: `Bearer ${token}` },
             });
             setLeads(response.data.content);
@@ -107,8 +107,8 @@ const Leads = () => {
     const handleAddLead = async () => {
         const newErrors = {
             person_name: !newLead.person_name.trim(),
-            phone_number: !newLead.phone_number.trim(),
-            email: !newLead.email.trim(),
+            phone_number: !newLead.phone_number.trim() || !/^\d{10}$/.test(newLead.phone_number),
+            email: !newLead.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newLead.email),
         };
 
         setErrors(newErrors);
@@ -276,20 +276,7 @@ const Leads = () => {
                         </TableHead>
                         <TableBody>
                             {showAddRow && (
-                                <TableRow
-                                    sx={{
-                                        "& th": {
-                                            backgroundColor: "#eaf1f0",
-                                            fontWeight: "bold",
-                                            height: "35px",
-                                            fontSize: "0.8rem",
-                                            borderRight: "1px solid #ddd",
-                                        },
-                                        "& th:last-child": {
-                                            borderRight: "none",
-                                        },
-                                    }}
-                                >
+                                <TableRow>
                                     <TableCell>{leads.length + 1}</TableCell>
                                     <TableCell>
                                         <TextField
@@ -300,7 +287,23 @@ const Leads = () => {
                                                 setErrors({ ...errors, person_name: false });
                                             }}
                                             error={errors.person_name}
-                                            helperText={errors.person_name ? "required" : ""}
+                                            helperText={errors.person_name ? "Name is required" : ""}
+                                            FormHelperTextProps={{
+                                                sx: {
+                                                    fontSize: '10px',
+                                                    marginTop: '2px',
+                                                },
+                                            }}
+                                            inputProps={{
+                                                style: {
+                                                    paddingBottom: '4px',
+                                                },
+                                            }}
+                                            sx={{
+                                                '& .MuiInputBase-root': {
+                                                    alignItems: 'flex-end',
+                                                },
+                                            }}
                                         />
                                     </TableCell>
                                     <TableCell>
@@ -312,7 +315,23 @@ const Leads = () => {
                                                 setErrors({ ...errors, phone_number: false });
                                             }}
                                             error={errors.phone_number}
-                                            helperText={errors.phone_number ? "required" : ""}
+                                            helperText={errors.phone_number ? "Valid 10-digit number required" : ""}
+                                            FormHelperTextProps={{
+                                                sx: {
+                                                    fontSize: '10px',
+                                                    marginTop: '2px',
+                                                },
+                                            }}
+                                            inputProps={{
+                                                style: {
+                                                    paddingBottom: '4px',
+                                                },
+                                            }}
+                                            sx={{
+                                                '& .MuiInputBase-root': {
+                                                    alignItems: 'flex-end',
+                                                },
+                                            }}
                                         />
                                     </TableCell>
                                     <TableCell>
@@ -324,7 +343,23 @@ const Leads = () => {
                                                 setErrors({ ...errors, email: false });
                                             }}
                                             error={errors.email}
-                                            helperText={errors.email ? "required" : ""}
+                                            helperText={errors.email ? "Valid email required (user@example.com)" : ""}
+                                            FormHelperTextProps={{
+                                                sx: {
+                                                    fontSize: '10px',
+                                                    marginTop: '2px',
+                                                },
+                                            }}
+                                            inputProps={{
+                                                style: {
+                                                    paddingBottom: '4px',
+                                                },
+                                            }}
+                                            sx={{
+                                                '& .MuiInputBase-root': {
+                                                    alignItems: 'flex-end',
+                                                },
+                                            }}
                                         />
                                     </TableCell>
                                     <TableCell>
@@ -332,6 +367,12 @@ const Leads = () => {
                                             variant="standard"
                                             value={newLead.address}
                                             onChange={(e) => setNewLead({ ...newLead, address: e.target.value })}
+                                            inputProps={{ style: { paddingBottom: '4px' } }}
+                                            sx={{
+                                                '& .MuiInputBase-root': {
+                                                    alignItems: 'flex-end',
+                                                },
+                                            }}
                                         />
                                     </TableCell>
                                     <TableCell>
@@ -339,6 +380,12 @@ const Leads = () => {
                                             variant="standard"
                                             value={newLead.company_name}
                                             onChange={(e) => setNewLead({ ...newLead, company_name: e.target.value })}
+                                            inputProps={{ style: { paddingBottom: '4px' } }}
+                                            sx={{
+                                                '& .MuiInputBase-root': {
+                                                    alignItems: 'flex-end',
+                                                },
+                                            }}
                                         />
                                     </TableCell>
                                     <TableCell>{newLead.status}</TableCell>
@@ -347,6 +394,12 @@ const Leads = () => {
                                             variant="standard"
                                             value={newLead.note}
                                             onChange={(e) => setNewLead({ ...newLead, note: e.target.value })}
+                                            inputProps={{ style: { paddingBottom: '4px' } }}
+                                            sx={{
+                                                '& .MuiInputBase-root': {
+                                                    alignItems: 'flex-end',
+                                                },
+                                            }}
                                         />
                                     </TableCell>
                                     <TableCell>—</TableCell>
@@ -370,7 +423,7 @@ const Leads = () => {
                                             },
                                         }}
                                     >
-                                        <TableCell>{index + 1}</TableCell>
+                                        <TableCell>{(pageNo || 0) * pageSize + index + 1}</TableCell>
                                         <TableCell>{lead.person_name}</TableCell>
                                         <TableCell>{lead.phone_number}</TableCell>
                                         <TableCell sx={{ minWidth: 180, wordBreak: "break-word", whiteSpace: "normal" }}>{lead.email}</TableCell>
@@ -533,40 +586,43 @@ const Leads = () => {
                                 </TableRow>
                             )}
                         </TableBody>
+
                     </Table>
                 </TableContainer>
             </Paper>
 
             {/* Pagination */}
             <br />
-            <Box
-                sx={{
-                    position: "sticky",
-                    bottom: 0,
-                    width: "100%",
-                    backgroundColor: "#fff",
-                    boxShadow: "0px -2px 5px rgba(0,0,0,0.1)",
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    zIndex: 10,
-                    borderRadius: "12px",
-                }}
-            >
-                <div style={{ display: "flex", justifyContent: "center", padding: "10px" }}>
-                    <IconButton onClick={handlePrevPage} disabled={pageNo === 0}>
-                        <ArrowBackIosIcon />
-                    </IconButton>
-                    {Array.from({ length: totalPages }, (_, i) => (
-                        <Button key={i} onClick={() => handlePageClick(i)} disabled={i === pageNo}>
-                            {i + 1}
-                        </Button>
-                    ))}
-                    <IconButton onClick={handleNextPage} disabled={pageNo === totalPages - 1}>
-                        <ArrowForwardIosIcon />
-                    </IconButton>
-                </div>
-            </Box>
+            {leads.length > 0 && (
+                <Box
+                    sx={{
+                        position: "sticky",
+                        bottom: 0,
+                        width: "100%",
+                        backgroundColor: "#fff",
+                        boxShadow: "0px -2px 5px rgba(0,0,0,0.1)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        zIndex: 10,
+                        borderRadius: "12px",
+                    }}
+                >
+                    <div style={{ display: "flex", justifyContent: "center", padding: "10px" }}>
+                        <IconButton onClick={handlePrevPage} disabled={pageNo === 0}>
+                            <ArrowBackIosIcon />
+                        </IconButton>
+                        {Array.from({ length: totalPages }, (_, i) => (
+                            <Button key={i} onClick={() => handlePageClick(i)} disabled={i === pageNo}>
+                                {i + 1}
+                            </Button>
+                        ))}
+                        <IconButton onClick={handleNextPage} disabled={pageNo === totalPages - 1}>
+                            <ArrowForwardIosIcon />
+                        </IconButton>
+                    </div>
+                </Box>
+            )}
 
             <Dialog open={noteDialogOpen} onClose={() => setNoteDialogOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ fontSize: '18px', fontWeight: 'bold', color: '#ba343b' }}>Note</DialogTitle>

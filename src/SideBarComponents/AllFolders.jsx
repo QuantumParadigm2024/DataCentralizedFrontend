@@ -24,6 +24,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import ShareIcon from '@mui/icons-material/Share';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ClickAwayListener from '@mui/material/ClickAwayListener';
+import BlockIcon from '@mui/icons-material/Block';
 
 const AllFolders = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -472,6 +473,8 @@ const AllFolders = () => {
 
     const [selectedCategory, setSelectedCategory] = useState('IT');
 
+    const [isAccountsUser, setIsAccountsUser] = useState(true);
+
     return (
         <>
             <Box>
@@ -500,13 +503,21 @@ const AllFolders = () => {
                         </Grid>
                         {!openFolder && (
                             <Grid item xs={12} sm="auto" sx={{ mt: { xs: 1, sm: 0 } }}>
-                                <Button fullWidth startIcon={<CreateNewFolderIcon />} onClick={handleOpen}
+                                <Button
+                                    fullWidth
+                                    startIcon={<CreateNewFolderIcon />}
+                                    onClick={handleOpen}
+                                    disabled={selectedCategory === "Accounts" && !isAccountsUser}
                                     sx={{
                                         fontWeight: "bold",
-                                        bgcolor: '#ba343b',
-                                        '&:hover': { bgcolor: '#9e2b31' },
-                                        color: 'white',
-                                    }}>
+                                        bgcolor: selectedCategory === "Accounts" && !isAccountsUser ? '#d3d3d3' : '#ba343b',
+                                        '&:hover': {
+                                            bgcolor: selectedCategory === "Accounts" && !isAccountsUser ? '#d3d3d3' : '#9e2b31',
+                                        },
+                                        color: selectedCategory === "Accounts" && !isAccountsUser ? 'white' : 'white',
+                                        cursor: selectedCategory === "Accounts" && !isAccountsUser ? 'not-allowed' : 'pointer',
+                                    }}
+                                >
                                     Create Folder
                                 </Button>
                             </Grid>
@@ -522,20 +533,43 @@ const AllFolders = () => {
                                 borderRadius: '18px',
                                 overflow: 'hidden',
                                 border: '1px solid #c4c4c4',
-                                maxWidth: 400,
+                                maxWidth: 600,
                             }}
                         >
-                            {['IT', 'Design', 'Marketing'].map((label) => (
+                            {['IT', 'Design', 'Marketing', 'Accounts'].map((label) => (
                                 <Button
                                     key={label}
                                     variant={selectedCategory === label ? 'contained' : 'outlined'}
-                                    onClick={() => {
+                                    onClick={async () => {
                                         setSelectedCategory(label);
-                                        fetchFolders(label);
+
+                                        if (label === 'Accounts') {
+                                            try {
+                                                const response = await axiosInstance.get('/planotech-inhouse/accounts/verify-access', {
+                                                    headers: {
+                                                        Authorization: `Bearer ${token}`,
+                                                    },
+                                                });
+
+                                                if (response.data.authorized) {
+                                                    setIsAccountsUser(true);
+                                                    fetchFolders(label);
+                                                } else {
+                                                    setIsAccountsUser(false);
+                                                    setFolders([]);
+                                                }
+                                            } catch (error) {
+                                                setIsAccountsUser(false);
+                                                setFolders([]);
+                                            }
+                                        } else {
+                                            setIsAccountsUser(true);
+                                            fetchFolders(label);
+                                        }
                                     }}
                                     sx={{
                                         flex: 1,
-                                        px: 5,
+                                        px: 6,
                                         py: 1,
                                         borderRadius: 0,
                                         fontWeight: 'bold',
@@ -584,7 +618,7 @@ const AllFolders = () => {
                                 >
                                     <MenuItem>
                                         <label style={{ fontWeight: "bold", color: "grey", fontSize: "12.5px" }}>
-                                            Small File (≤100mb)
+                                            Small File (≤500mb)
                                             <Input
                                                 type="file"
                                                 sx={{ display: "none" }}
@@ -840,199 +874,229 @@ const AllFolders = () => {
                     </Box>
                 ) : (
                     <Box sx={{ mt: 3 }}>
-                        <Grid container alignItems="center" justifyContent="space-between">
-                            <Grid item>
-                                <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 'bold' }}>All Folders</Typography>
-                            </Grid>
-                            <Grid item>
-                                <ToggleButtonGroup
-                                    value={viewMode}
-                                    exclusive
-                                    onChange={(e, newMode) => setViewMode(newMode || viewMode)}
-                                    aria-label="View Mode"
-                                    sx={{
-                                        borderRadius: "24px",
-                                        border: "1px solid #ccc",
-                                        overflow: "hidden",
-                                        height: "36px",
-                                    }}
+                        {selectedCategory === "Accounts" && !isAccountsUser ? (
+                            <Box sx={{ mt: 3, textAlign: 'center' }}>
+                                <Typography
+                                    variant="h6"
+                                    sx={{ color: 'gray', fontWeight: 'bold', fontSize: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5 }}
                                 >
-                                    <ToggleButton value="list">
-                                        <ViewList fontSize="medium" />
-                                    </ToggleButton>
-                                    <ToggleButton value="grid">
-                                        <GridView fontSize="medium" />
-                                    </ToggleButton>
-                                </ToggleButtonGroup>
-                            </Grid>
-                        </Grid>
-                        {filteredFolders.length === 0 ? (
-                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
-                                <Typography color="textSecondary" sx={{ fontSize: '14px', color: 'grey', fontWeight: 'bold' }}>No folders available</Typography>
-                            </Box>
-                        ) : viewMode === "list" ? (
-                            <Box sx={{ width: '100%', mt: 2 }}>
-                                <Box sx={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '3.5fr 2.5fr 2.5fr 1fr 1fr',
-                                    fontWeight: 'bold',
-                                    bgcolor: '#f5f5f5',
-                                    p: 1,
-                                    borderBottom: '2px solid #ddd',
-                                    borderRadius: '8px'
-                                }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
-                                </Box>
-                                <List>
-                                    {filteredFolders.map((folder) => (
-                                        <ListItem
-                                            key={folder.entityId}
-                                            sx={{
-                                                display: 'grid',
-                                                gridTemplateColumns: '3.5fr 2.5fr 2.5fr 1fr 1fr',
-                                                alignItems: 'center',
-                                                p: 1.5,
-                                                borderBottom: '1px solid #ddd',
-                                                borderRadius: '8px',
-                                                cursor: 'pointer',
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                "&:hover": { bgcolor: "#f9f9f9" }
-                                            }}
-                                            onClick={() => handleFolderClick(folder.entityId)}
-                                        >
-                                            <Box sx={{ display: "flex", alignItems: "center" }}>
-                                                <FolderIcon sx={{ color: "#f8d775", mr: 1 }} />
-                                                <Typography
-                                                    variant="body1"
-                                                    sx={{
-                                                        color: "#555555",
-                                                        fontSize: "14px",
-                                                        fontWeight: "bold",
-                                                        whiteSpace: "nowrap",
-                                                        overflow: "hidden",
-                                                        textOverflow: "ellipsis",
-                                                        maxWidth: "200px"
-                                                    }}
-                                                    title={folder.folderName}
-                                                >
-                                                    {folder.folderName.length > 20 ? `${folder.folderName.slice(0, 20)}...` : folder.folderName}
-                                                </Typography>
-                                            </Box>
-                                            <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
-                                                {new Date(folder.time).toLocaleString()}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
-                                                {folder.createdBy ? folder.createdBy : "N/A"}
-                                            </Typography>
-                                            <Tooltip>
-                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-                                                    <IconButton
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            toggleFolderStar(folder.entityId);
-                                                        }}
-                                                        disableRipple
-                                                        disableFocusRipple
-                                                        sx={{
-                                                            '&:hover': {
-                                                                backgroundColor: 'transparent',
-                                                            },
-                                                            '&.MuiIconButton-root': {
-                                                                padding: 0,
-                                                            },
-                                                        }}
-                                                    >
-                                                        {starredFolders.some(fav => fav.entityId === folder.entityId) ? (
-                                                            <Star sx={{ color: "gold" }} />
-                                                        ) : (
-                                                            <StarBorder />
-                                                        )}
-                                                    </IconButton>
-                                                </Box>
-                                            </Tooltip>
-                                            <Tooltip>
-                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 1 }}>
-                                                    <IconButton
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            handleDeleteFolder(folder.entityId, event);
-                                                        }}
-                                                        sx={{ color: "gray" }}
-                                                    >
-                                                        <DeleteIcon />
-                                                    </IconButton>
-                                                </Box>
-                                            </Tooltip>
-                                        </ListItem>
-                                    ))}
-                                </List>
+                                    <BlockIcon fontSize="small" />
+                                    Access Denied – You are not authorized to view Accounts department.
+                                </Typography>
                             </Box>
                         ) : (
-                            <Grid container spacing={2} sx={{ mt: 2, mb: 1 }}>
-                                {filteredFolders.map((folder) => (
-                                    <Grid item key={folder[0]} xs={6} sm={4} md={3} lg={2.4} xl={2.4}>
-                                        <Card
+                            <>
+                                <Grid container alignItems="center" justifyContent="space-between">
+                                    <Grid item>
+                                        <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 'bold' }}>
+                                            All Folders
+                                        </Typography>
+                                    </Grid>
+                                    <Grid item>
+                                        <ToggleButtonGroup
+                                            value={viewMode}
+                                            exclusive
+                                            onChange={(e, newMode) => setViewMode(newMode || viewMode)}
+                                            aria-label="View Mode"
                                             sx={{
-                                                display: "flex",
-                                                flexDirection: "column",
-                                                alignItems: "center",
-                                                cursor: "pointer",
-                                                boxShadow: "0px 2px 5px rgba(0,0,0,0.2)",
-                                                width: "100%",
+                                                borderRadius: "24px",
+                                                border: "1px solid #ccc",
+                                                overflow: "hidden",
+                                                height: "36px",
                                             }}
-                                            onClick={() => handleFolderClick(folder.entityId)}
                                         >
-                                            <FolderIcon sx={{ fontSize: 80, color: "#f8d775", mt: 2 }} />
-                                            <CardContent sx={{ textAlign: "center" }}>
-                                                <Typography
-                                                    variant="body2"
-                                                    noWrap
+                                            <ToggleButton value="list">
+                                                <ViewList fontSize="medium" />
+                                            </ToggleButton>
+                                            <ToggleButton value="grid">
+                                                <GridView fontSize="medium" />
+                                            </ToggleButton>
+                                        </ToggleButtonGroup>
+                                    </Grid>
+                                </Grid>
+
+                                {(filteredFolders.length === 0 && selectedCategory !== "Accounts") && (
+                                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
+                                        <Typography
+                                            color="textSecondary"
+                                            sx={{ fontSize: '14px', color: 'grey', fontWeight: 'bold' }}
+                                        >
+                                            No folders available
+                                        </Typography>
+                                    </Box>
+                                )}
+
+                                {filteredFolders.length > 0 && (viewMode === "list" ? (
+                                    <Box sx={{ width: '100%', mt: 2 }}>
+                                        <Box sx={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '3.5fr 2.5fr 2.5fr 1fr 1fr',
+                                            fontWeight: 'bold',
+                                            bgcolor: '#f5f5f5',
+                                            p: 1,
+                                            borderBottom: '2px solid #ddd',
+                                            borderRadius: '8px'
+                                        }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
+                                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
+                                        </Box>
+                                        <List>
+                                            {filteredFolders.map((folder) => (
+                                                <ListItem
+                                                    key={folder.entityId}
                                                     sx={{
-                                                        width: "100px",
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '3.5fr 2.5fr 2.5fr 1fr 1fr',
+                                                        alignItems: 'center',
+                                                        p: 1.5,
+                                                        borderBottom: '1px solid #ddd',
+                                                        borderRadius: '8px',
+                                                        cursor: 'pointer',
                                                         overflow: "hidden",
                                                         textOverflow: "ellipsis",
-                                                        fontWeight: "bold",
-                                                        color: "#555555",
+                                                        "&:hover": { bgcolor: "#f9f9f9" }
                                                     }}
+                                                    onClick={() => handleFolderClick(folder.entityId)}
                                                 >
-                                                    {folder.folderName}
-                                                </Typography>
-                                            </CardContent>
-                                        </Card>
+                                                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                                                        <FolderIcon sx={{ color: "#f8d775", mr: 1 }} />
+                                                        <Typography
+                                                            variant="body1"
+                                                            sx={{
+                                                                color: "#555555",
+                                                                fontSize: "14px",
+                                                                fontWeight: "bold",
+                                                                whiteSpace: "nowrap",
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                                maxWidth: "200px"
+                                                            }}
+                                                            title={folder.folderName}
+                                                        >
+                                                            {folder.folderName.length > 20 ? `${folder.folderName.slice(0, 20)}...` : folder.folderName}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
+                                                        {new Date(folder.time).toLocaleString()}
+                                                    </Typography>
+                                                    <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
+                                                        {folder.createdBy ? folder.createdBy : "N/A"}
+                                                    </Typography>
+                                                    <Tooltip>
+                                                        <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                                                            <IconButton
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    toggleFolderStar(folder.entityId);
+                                                                }}
+                                                                disableRipple
+                                                                disableFocusRipple
+                                                                sx={{
+                                                                    '&:hover': {
+                                                                        backgroundColor: 'transparent',
+                                                                    },
+                                                                    '&.MuiIconButton-root': {
+                                                                        padding: 0,
+                                                                    },
+                                                                }}
+                                                            >
+                                                                {starredFolders.some(fav => fav.entityId === folder.entityId) ? (
+                                                                    <Star sx={{ color: "gold" }} />
+                                                                ) : (
+                                                                    <StarBorder />
+                                                                )}
+                                                            </IconButton>
+                                                        </Box>
+                                                    </Tooltip>
+                                                    <Tooltip>
+                                                        <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 1 }}>
+                                                            <IconButton
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    handleDeleteFolder(folder.entityId, event);
+                                                                }}
+                                                                sx={{ color: "gray" }}
+                                                            >
+                                                                <DeleteIcon />
+                                                            </IconButton>
+                                                        </Box>
+                                                    </Tooltip>
+                                                </ListItem>
+                                            ))}
+                                        </List>
+                                    </Box>
+                                ) : (
+                                    <Grid container spacing={2} sx={{ mt: 2, mb: 1 }}>
+                                        {filteredFolders.map((folder) => (
+                                            <Grid item key={folder.entityId} xs={6} sm={4} md={3} lg={2.4} xl={2.4}>
+                                                <Card
+                                                    sx={{
+                                                        display: "flex",
+                                                        flexDirection: "column",
+                                                        alignItems: "center",
+                                                        cursor: "pointer",
+                                                        boxShadow: "0px 2px 5px rgba(0,0,0,0.2)",
+                                                        width: "100%",
+                                                    }}
+                                                    onClick={() => handleFolderClick(folder.entityId)}
+                                                >
+                                                    <FolderIcon sx={{ fontSize: 80, color: "#f8d775", mt: 2 }} />
+                                                    <CardContent sx={{ textAlign: "center" }}>
+                                                        <Typography
+                                                            variant="body2"
+                                                            noWrap
+                                                            sx={{
+                                                                width: "100px",
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                                fontWeight: "bold",
+                                                                color: "#555555",
+                                                            }}
+                                                        >
+                                                            {folder.folderName}
+                                                        </Typography>
+                                                    </CardContent>
+                                                </Card>
+                                            </Grid>
+                                        ))}
                                     </Grid>
                                 ))}
-                            </Grid>
-                        )}
-                        {filteredFolders.length > 0 && (
-                            <Box
-                                sx={{
-                                    position: "sticky",
-                                    bottom: 0,
-                                    left: 0,
-                                    width: "100%",
-                                    backgroundColor: "#fff",
-                                    boxShadow: "0px -2px 5px rgba(0,0,0,0.1)",
-                                    // padding: "10px",
-                                    display: "flex",
-                                    justifyContent: "center",
-                                    alignItems: "center",
-                                    zIndex: 10,
-                                    borderRadius: "12px",
-                                }}
-                            >
-                                <div style={{ display: "flex", justifyContent: "center", padding: "10px" }}>
-                                    <IconButton onClick={handlePrevPage} disabled={pageNo === 0}><ArrowBackIosIcon /></IconButton>
-                                    {Array.from({ length: totalPages }, (_, i) => (
-                                        <Button key={i} onClick={() => handlePageClick(i)} disabled={i === pageNo}>{i + 1}</Button>
-                                    ))}
-                                    <IconButton onClick={handleNextPage} disabled={pageNo === totalPages - 1}><ArrowForwardIosIcon /></IconButton>
-                                </div>
-                            </Box>
+
+                                {filteredFolders.length > 0 && (
+                                    <Box
+                                        sx={{
+                                            position: "sticky",
+                                            bottom: 0,
+                                            left: 0,
+                                            width: "100%",
+                                            backgroundColor: "#fff",
+                                            boxShadow: "0px -2px 5px rgba(0,0,0,0.1)",
+                                            display: "flex",
+                                            justifyContent: "center",
+                                            alignItems: "center",
+                                            zIndex: 10,
+                                            borderRadius: "12px",
+                                        }}
+                                    >
+                                        <div style={{ display: "flex", justifyContent: "center", padding: "10px" }}>
+                                            <IconButton onClick={handlePrevPage} disabled={pageNo === 0}>
+                                                <ArrowBackIosIcon />
+                                            </IconButton>
+                                            {Array.from({ length: totalPages }, (_, i) => (
+                                                <Button key={i} onClick={() => handlePageClick(i)} disabled={i === pageNo}>
+                                                    {i + 1}
+                                                </Button>
+                                            ))}
+                                            <IconButton onClick={handleNextPage} disabled={pageNo === totalPages - 1}>
+                                                <ArrowForwardIosIcon />
+                                            </IconButton>
+                                        </div>
+                                    </Box>
+                                )}
+                            </>
                         )}
                     </Box>
                 )}
