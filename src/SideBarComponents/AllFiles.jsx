@@ -217,6 +217,7 @@ const AllFiles = () => {
         setChoosecategory(selected);
 
         if (selected === 'Other') {
+            setChoosecategory("")
             setOpenOtherCategoryDialog(true);
         } else {
             setOtherCategory('');
