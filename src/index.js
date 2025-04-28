@@ -2,6 +2,9 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import WebFont from 'webfontloader';
 import App from "./App.jsx";
+import { Provider } from "react-redux";
+import store from "./Redux/Store.jsx";
+
 
 WebFont.load({
     google: {
@@ -10,5 +13,5 @@ WebFont.load({
 });
 
 createRoot(document.getElementById("root")).render(
-    <App />
+    <Provider store={store}><App /></Provider> 
 );

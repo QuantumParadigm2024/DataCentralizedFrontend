@@ -12,6 +12,8 @@ import demo from "../Assets/ColumnNaame.jpg";
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import TuneIcon from '@mui/icons-material/Tune';
 import SampleFile from "../Assets/Sample File.csv"
+import { useDispatch, useSelector } from "react-redux";
+import { addCategory } from "../Redux/CategorySlice";
 
 const AllFiles = () => {
     const [chooseCategory, setChoosecategory] = useState("");
@@ -35,6 +37,9 @@ const AllFiles = () => {
         companyName: "",
         industryType: "",
     }]);
+    const dispatch = useDispatch();
+    const categories = useSelector((state) => state.category.categories);
+
 
     const decryptToken = (encryptedToken) => {
         try {
@@ -45,6 +50,9 @@ const AllFiles = () => {
             return null;
         }
     };
+    const [otherCategory, setOtherCategory] = useState('');
+    const [openOtherCategoryDialog, setOpenOtherCategoryDialog] = useState(false);
+
 
     const encryptedToken = sessionStorage.getItem("dc");
     const token = decryptToken(encryptedToken);
@@ -64,7 +72,7 @@ const AllFiles = () => {
         setOpenUploadDialog(false);
         setAddManualDialog(true);
     };
-    
+
     const handleCloseAddManualDialog = () => {
         setAddManualDialog(false);
     };
@@ -194,6 +202,25 @@ const AllFiles = () => {
             setStatusDialogOpen(true);
         } finally {
             setTimeout(() => setStatusDialogOpen(false), 3000);
+        }
+    };
+    const handleSubmit = () => {
+        dispatch(addCategory(otherCategory));
+        setChoosecategory(otherCategory.trim());
+        setOpenOtherCategoryDialog(false);
+        setOtherCategory('');
+    };
+
+
+    const handleCategoryChange = (e) => {
+        const selected = e.target.value;
+        setChoosecategory(selected);
+
+        if (selected === 'Other') {
+            setOpenOtherCategoryDialog(true);
+        } else {
+            setOtherCategory('');
+            setOpenOtherCategoryDialog(false);
         }
     };
 
@@ -327,7 +354,7 @@ const AllFiles = () => {
                                     Incorrect headers or file format may lead to data processing errors.{" "}
                                     You can{" "}
                                     <a href={SampleFile} download="Sample File.csv" style={{ color: "#1976d2", textDecoration: "underline" }}>
-                                        download a Sample File.csv 
+                                        download a Sample File.csv
                                     </a>{" "}
                                     file here to see the expected format.
                                 </Typography>
@@ -352,26 +379,46 @@ const AllFiles = () => {
                                         id="category-select"
                                         value={chooseCategory}
                                         label="Select Category"
-                                        onChange={(e) => {
-                                            setChoosecategory(e.target.value);
-                                            setRefreshData((prev) => !prev);
-                                        }}
+                                        onChange={handleCategoryChange}
                                     >
-                                        {[
-                                            "Event Clients",
-                                            "Vendors",
-                                            "Corporate",
-                                            "Executive Data",
-                                            "Pharma",
-                                            "Customer",
-                                            "Other",
-                                        ].map((category) => (
-                                            <MenuItem key={category} value={category}>
-                                                {category}
-                                            </MenuItem>
-                                        ))}
+                                        {Array.isArray(categories) &&
+                                            categories.map((category) => (
+                                                <MenuItem key={category} value={category}>
+                                                    {category}
+                                                </MenuItem>
+                                            ))}
                                     </Select>
                                 </FormControl>
+
+
+                                <Dialog
+                                    open={openOtherCategoryDialog}
+                                    onClose={() => setOpenOtherCategoryDialog(false)}
+                                    maxWidth="sm"
+                                    fullWidth
+                                >
+                                    <DialogTitle>Enter Other Category</DialogTitle>
+                                    <DialogContent>
+                                        <TextField
+                                            autoFocus
+                                            margin="dense"
+                                            label="Other Category"
+                                            fullWidth
+                                            value={otherCategory}
+                                            onChange={(e) => setOtherCategory(e.target.value)}
+                                        />
+                                    </DialogContent>
+                                    <DialogActions>
+                                        <Button onClick={() => setOpenOtherCategoryDialog(false)}>Cancel</Button>
+                                        <Button
+                                            onClick={handleSubmit}
+                                            variant="contained"
+                                            disabled={!otherCategory.trim()}
+                                        >
+                                            Submit
+                                        </Button>
+                                    </DialogActions>
+                                </Dialog>
 
                                 {selectedFiles.length > 0 && (
                                     <Typography
