@@ -5,7 +5,6 @@ import { LinearProgress, Box, Button, Grid, TextField, Dialog, DialogActions, Di
 import { Search, ViewList, GridView, Folder as FolderIcon, UploadFile, Star, StarBorder } from "@mui/icons-material";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
 import axiosInstance from "../Helper/AxiosInstance";
-import { toast, ToastContainer } from "react-toastify";
 import ArrowBackIosRoundedIcon from '@mui/icons-material/ArrowBackIosRounded';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
@@ -25,6 +24,7 @@ import ShareIcon from '@mui/icons-material/Share';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ClickAwayListener from '@mui/material/ClickAwayListener';
 import BlockIcon from '@mui/icons-material/Block';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 const AllFolders = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -149,7 +149,7 @@ const AllFolders = () => {
     }, []);
 
     useEffect(() => {
-        fetchFolders('IT');
+        fetchFolders(selectedCategory);
     }, []);
 
     const fetchFolders = async (category = 'IT', newPageNo = pageNo) => {
@@ -174,15 +174,15 @@ const AllFolders = () => {
     };
 
     const handleNextPage = () => {
-        if (pageNo < totalPages - 1) fetchFolders(pageNo + 1);
+        if (pageNo < totalPages - 1) fetchFolders(selectedCategory, pageNo + 1);
     };
 
     const handlePrevPage = () => {
-        if (pageNo > 0) fetchFolders(pageNo - 1);
+        if (pageNo > 0) fetchFolders(selectedCategory, pageNo - 1);
     };
 
     const handlePageClick = (page) => {
-        fetchFolders(page);
+        fetchFolders(selectedCategory, page);
     };
 
     const filteredFolders = folders.filter(folder =>
@@ -206,6 +206,7 @@ const AllFolders = () => {
 
     const handleCreateFolder = async () => {
         setOpen(false);
+
         if (!folderName.trim()) {
             setCreateFolder("Please enter a folder name");
             setCreateFolderOpen(true);
@@ -222,14 +223,22 @@ const AllFolders = () => {
                     Authorization: `Bearer ${token}`
                 }
             });
-
             setCreateFolder("✅ Folder created successfully!");
             setFolderName("");
             handleClose();
-            fetchFolders();
+            fetchFolders(selectedCategory);
         } catch (error) {
             console.error("Error creating folder:", error);
-            setCreateFolder("❌ Failed to create folder");
+            if (
+                error.response &&
+                error.response.status === 400 &&
+                error.response.data.message === "folder already exists"
+            ) {
+                setCreateFolder("⚠️ Folder name exists. Try another.");
+            } else {
+                setCreateFolder("❌ Failed to create folder. Please try again.");
+            }
+            setFolderName("");
         } finally {
             setCreating(false);
         }
@@ -252,7 +261,6 @@ const AllFolders = () => {
             }));
         } catch (error) {
             console.error("Error fetching files:", error);
-            toast.error(error.response?.data?.message || "Error fetching files");
         }
     };
 
@@ -472,8 +480,12 @@ const AllFolders = () => {
     };
 
     const [selectedCategory, setSelectedCategory] = useState('IT');
-
     const [isAccountsUser, setIsAccountsUser] = useState(true);
+    const [twoFactorOpen, setTwoFactorOpen] = useState(false);
+    const [twoFactorCode, setTwoFactorCode] = useState(null);
+    const [authResultOpen, setAuthResultOpen] = useState(false);
+    const [authResultMessage, setAuthResultMessage] = useState("");
+    const [authSuccess, setAuthSuccess] = useState(false);
 
     return (
         <>
@@ -510,9 +522,9 @@ const AllFolders = () => {
                                     disabled={selectedCategory === "Accounts" && !isAccountsUser}
                                     sx={{
                                         fontWeight: "bold",
-                                        bgcolor: selectedCategory === "Accounts" && !isAccountsUser ? '#d3d3d3' : '#ba343b',
+                                        bgcolor: selectedCategory === "Accounts" && !isAccountsUser ? '#ededed' : '#ba343b',
                                         '&:hover': {
-                                            bgcolor: selectedCategory === "Accounts" && !isAccountsUser ? '#d3d3d3' : '#9e2b31',
+                                            bgcolor: selectedCategory === "Accounts" && !isAccountsUser ? '#ededed' : '#9e2b31',
                                         },
                                         color: selectedCategory === "Accounts" && !isAccountsUser ? 'white' : 'white',
                                         cursor: selectedCategory === "Accounts" && !isAccountsUser ? 'not-allowed' : 'pointer',
@@ -542,7 +554,6 @@ const AllFolders = () => {
                                     variant={selectedCategory === label ? 'contained' : 'outlined'}
                                     onClick={async () => {
                                         setSelectedCategory(label);
-
                                         if (label === 'Accounts') {
                                             try {
                                                 const response = await axiosInstance.get('/planotech-inhouse/accounts/verify-access', {
@@ -551,7 +562,12 @@ const AllFolders = () => {
                                                     },
                                                 });
 
-                                                if (response.data.authorized) {
+                                                if (response.data.code === 200 && response.data.sessionValid === false) {
+                                                    setTwoFactorCode(response.data.twoFactorCode);
+                                                    setTwoFactorOpen(true);
+                                                    setIsAccountsUser(false);
+                                                    setFolders([]);
+                                                } else if (response.data.code === 200 && response.data.sessionValid === true) {
                                                     setIsAccountsUser(true);
                                                     fetchFolders(label);
                                                 } else {
@@ -693,11 +709,14 @@ const AllFolders = () => {
                                                 }}
                                                 onClick={() => {
                                                     const imageExtensions = ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "webp"];
+                                                    const videoExtensions = ["mp4", "webm", "ogg", "mov", "avi", "mkv"];
                                                     const fileExtension = file.fileName.split('.').pop().toLowerCase();
 
                                                     if (file.type === "application/pdf") {
                                                         window.open(file.fileLink, '_blank');
                                                     } else if (imageExtensions.includes(fileExtension)) {
+                                                        window.open(file.fileLink, '_blank');
+                                                    } else if (videoExtensions.includes(fileExtension)) {
                                                         window.open(file.fileLink, '_blank');
                                                     } else {
                                                         const link = document.createElement('a');
@@ -874,8 +893,17 @@ const AllFolders = () => {
                     </Box>
                 ) : (
                     <Box sx={{ mt: 3 }}>
-                        {selectedCategory === "Accounts" && !isAccountsUser ? (
-                            <Box sx={{ mt: 3, textAlign: 'center' }}>
+                        {selectedCategory === "Accounts" && !isAccountsUser && !twoFactorOpen ? (
+                            <Box
+                                sx={{
+                                    height: '50vh',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    flexDirection: 'column',
+                                    textAlign: 'center'
+                                }}
+                            >
                                 <Typography
                                     variant="h6"
                                     sx={{ color: 'gray', fontWeight: 'bold', fontSize: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5 }}
@@ -915,7 +943,7 @@ const AllFolders = () => {
                                     </Grid>
                                 </Grid>
 
-                                {(filteredFolders.length === 0 && selectedCategory !== "Accounts") && (
+                                {filteredFolders.length === 0 && (selectedCategory !== "Accounts" || (selectedCategory === "Accounts" && isAccountsUser)) && (
                                     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
                                         <Typography
                                             color="textSecondary"
@@ -1101,6 +1129,80 @@ const AllFolders = () => {
                     </Box>
                 )}
 
+                <Dialog open={twoFactorOpen} onClose={() => setTwoFactorOpen(false)}>
+                    <DialogTitle sx={{ fontSize: "18px", fontWeight: "bold", color: "#ba343b", textAlign: 'center' }}>Two-Factor Authentication</DialogTitle>
+                    <DialogContent>
+                        <Typography sx={{ fontWeight: 'bold' }}>
+                            You're an accountant, but we need a quick confirmation before giving you access. Please click OK to get access.
+                        </Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setTwoFactorOpen(false)} color="error">Cancel</Button>
+                        <Button
+                            onClick={async () => {
+                                try {
+                                    await axiosInstance.post(`/planotech-inhouse/accounts/verify-2fa?code=${twoFactorCode}`, {}, {
+                                        headers: {
+                                            Authorization: `Bearer ${token}`,
+                                        }
+                                    });
+
+                                    await axiosInstance.get('/planotech-inhouse/get/accounts/dashboard', {
+                                        headers: {
+                                            Authorization: `Bearer ${token}`,
+                                        },
+                                    });
+
+                                    setAuthSuccess(true);
+                                    setAuthResultMessage("Authentication successful. Access granted to Accounts dashboard.");
+                                    setAuthResultMessage("Authentication successful. Access granted to Accounts dashboard.");
+                                    setTimeout(() => {
+                                        setAuthResultOpen(false);
+                                    }, 2000);
+                                    setIsAccountsUser(true);
+                                    fetchFolders("Accounts");
+                                } catch (err) {
+                                    setAuthSuccess(false);
+                                    setAuthResultMessage("Authentication failed. Please try again.");
+                                    setTimeout(() => {
+                                        setAuthResultOpen(false);
+                                    }, 2000);
+                                } finally {
+                                    setTwoFactorOpen(false);
+                                    setAuthResultOpen(true);
+                                }
+                            }}
+                            variant="outlined"
+                            sx={{ fontWeight: 'bold', color: "#ba343b", border: "0.5px solid #ba343b", borderRadius: '16px' }}
+                        >
+                            OK
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Dialog open={authResultOpen} onClose={() => setAuthResultOpen(false)}>
+                    <DialogContent>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 1,
+                                mt: 1,
+                            }}
+                        >
+                            {authSuccess ? (
+                                <CheckIcon sx={{ fontSize: 28, color: "#4caf50" }} />
+                            ) : (
+                                <ClearIcon sx={{ fontSize: 28, color: "#f44336" }} />
+                            )}
+                            <Typography sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '16px' }}>
+                                {authResultMessage}
+                            </Typography>
+                        </Box>
+                    </DialogContent>
+                </Dialog>
+
                 {/* Create Folder Dialog */}
                 <Dialog open={open} onClose={handleClose}>
                     <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>
@@ -1238,18 +1340,23 @@ const AllFolders = () => {
                     sx={{ "& .MuiDialog-paper": { width: "450px" } }}
                 >
                     <DialogContent sx={{ textAlign: "center", p: 3 }}>
-                        {(createFolder === "✅ Folder created successfully!" || createFolder === "❌ Failed to create folder") ? (
+                        {["✅ Folder created successfully!", "❌ Failed to create folder", "⚠️ Folder name exists. Try another."].includes(createFolder) ? (
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                                {createFolder === "✅ Folder created successfully!" ? (
+                                {createFolder === "✅ Folder created successfully!" && (
                                     <CheckIcon sx={{ fontSize: 28, color: "#4caf50" }} />
-                                ) : (
+                                )}
+                                {createFolder === "❌ Failed to create folder" && (
                                     <ClearIcon sx={{ fontSize: 28, color: "#f44336" }} />
                                 )}
+                                {createFolder === "⚠️ Folder name exists. Try another." && (
+                                    <InfoOutlinedIcon sx={{ fontSize: 28, color: "#ff9800" }} />
+                                )}
+
                                 <Typography
                                     variant="h6"
                                     sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
                                 >
-                                    {createFolder === "✅ Folder created successfully!" ? "Folder created successfully!" : "Failed to create folder"}
+                                    {createFolder.replace(/^✅ |^❌ |^⚠️ /, '')}
                                 </Typography>
                             </Box>
                         ) : (
@@ -1276,7 +1383,6 @@ const AllFolders = () => {
                     </DialogContent>
                 </Dialog>
             </Box>
-            <ToastContainer />
         </>
     );
 };

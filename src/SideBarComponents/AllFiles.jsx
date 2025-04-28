@@ -398,7 +398,7 @@ const AllFiles = () => {
                                     maxWidth="sm"
                                     fullWidth
                                 >
-                                    <DialogTitle>Enter Other Category</DialogTitle>
+                                    <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>Enter Other Category</DialogTitle>
                                     <DialogContent>
                                         <TextField
                                             autoFocus
@@ -410,11 +410,22 @@ const AllFiles = () => {
                                         />
                                     </DialogContent>
                                     <DialogActions>
-                                        <Button onClick={() => setOpenOtherCategoryDialog(false)}>Cancel</Button>
+                                        <Button onClick={() => setOpenOtherCategoryDialog(false)} sx={{ color: "#ba343b", }}>Cancel</Button>
                                         <Button
                                             onClick={handleSubmit}
-                                            variant="contained"
+                                            variant="outlined"
                                             disabled={!otherCategory.trim()}
+                                            sx={{
+                                                fontWeight: "bold",
+                                                color: "#ba343b",
+                                                borderColor: "#ba343b",
+                                                borderRadius: "30px",
+                                                px: 3,
+                                                "&:hover": {
+                                                    backgroundColor: "#ba343b",
+                                                    color: "white",
+                                                },
+                                            }}
                                         >
                                             Submit
                                         </Button>
