@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
-import React, { useState, useEffect } from "react";
-import { LinearProgress, Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton, Menu, MenuItem, ButtonGroup } from "@mui/material";
+import React, { useState, useEffect, useRef } from "react";
+import { LinearProgress, Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton, Menu, MenuItem } from "@mui/material";
 import { Search, ViewList, GridView, Folder as FolderIcon, UploadFile, Star, StarBorder } from "@mui/icons-material";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
 import axiosInstance from "../Helper/AxiosInstance";
@@ -25,6 +25,9 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ClickAwayListener from '@mui/material/ClickAwayListener';
 import BlockIcon from '@mui/icons-material/Block';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import EditIcon from "@mui/icons-material/Edit";
+import { useDropzone } from 'react-dropzone';
 
 const AllFolders = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -292,7 +295,7 @@ const AllFolders = () => {
             if (totalSize + file.size > maxSize) {
                 setUploadStatus(`⚠️ Total file size exceeds ${(maxSize / (1024 * 1024)).toFixed(0)}MB. Removing the last file.`);
                 setTimeout(() => setUploadOpen(false), 8000);
-                break; // Stop adding more files
+                break;
             }
 
             validFiles.push(file);
@@ -302,16 +305,59 @@ const AllFolders = () => {
         return validFiles;
     };
 
+    const handleDrop = (acceptedFiles, rejectedFiles) => {
+        setUploading(true);
+        setUploadOpen(true);
+        setUploadStatus("");
+        if (acceptedFiles.length > 0) {
+            const smallFiles = [];
+            const largeFiles = [];
+
+            for (const file of acceptedFiles) {
+                if (file.size <= MAX_SMALL_FILE_SIZE) {
+                    smallFiles.push(file);
+                } else if (file.size <= MAX_LARGE_FILE_SIZE) {
+                    largeFiles.push(file);
+                } else {
+                    setUploadStatus(`❌ File "${file.name}" exceeds the 50GB limit and can't be uploaded.`);
+                    setUploadOpen(true);
+                    setTimeout(() => setUploadOpen(false), 6000);
+                    return;
+                }
+            }
+
+            // Handle small files upload
+            const validSmallFiles = handleFileValidation(smallFiles, MAX_SMALL_FILE_SIZE);
+            if (validSmallFiles.length > 0) {
+                uploadFiles(validSmallFiles, openFolder, "/planotech-inhouse/uploadFile");
+            }
+
+            // Handle large files upload
+            const validLargeFiles = handleFileValidation(largeFiles, MAX_LARGE_FILE_SIZE);
+            if (validLargeFiles.length > 0) {
+                uploadFiles(validLargeFiles, openFolder, "/planotech-inhouse/upload/largeFile");
+            }
+        }
+
+        if (rejectedFiles.length > 0) {
+            setUploadStatus("❌ Some files were rejected due to size or format.");
+            setUploadOpen(true);
+            setTimeout(() => setUploadOpen(false), 5000);
+        }
+    };
+
+    const { getRootProps, getInputProps } = useDropzone({
+        onDrop: handleDrop,
+        noClick: true,
+        noKeyboard: true,
+        multiple: true,
+        maxSize: MAX_LARGE_FILE_SIZE,
+    });
+
     // ✅ Small File Upload (≤100MB)
     const handleFileUpload = async (event, entityId) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
-
-        setUploading(true);
-        setUploadOpen(true);
-        setUploadStatus("Checking file size...");
-
-        await new Promise((resolve) => setTimeout(resolve, 500)); // Ensure UI updates
 
         let validFiles = handleFileValidation([...files], MAX_SMALL_FILE_SIZE);
         if (validFiles.length === 0) return;
@@ -324,43 +370,193 @@ const AllFolders = () => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
 
-        setUploading(true);
-        setUploadOpen(true);
-        setUploadStatus("Checking file size...");
-
-        await new Promise((resolve) => setTimeout(resolve, 500)); // Ensure UI updates
-
         let validFiles = handleFileValidation([...files], MAX_LARGE_FILE_SIZE);
         if (validFiles.length === 0) return;
 
         await uploadFiles(validFiles, entityId, "/planotech-inhouse/upload/largeFile");
     };
 
-    // ✅ Reusable Upload Function
     const uploadFiles = async (validFiles, entityId, endpoint) => {
-        setUploadStatus("Uploading files...");
+        let anyFileUploaded = false;
+        let skippedCount = 0;
+        let uploadedCount = 0;
 
-        const formData = new FormData();
-        validFiles.forEach(file => formData.append("files", file));
+        if (!validFiles.length) return;
+
+        setUploading(true);
+        setUploadOpen(true);
+        setUploadStatus("");
+        const checkFormData = new FormData();
+        validFiles.forEach(file => checkFormData.append("files", file));
+
+        let existsMap = {};
 
         try {
-            const response = await axiosInstance.post(`${endpoint}?folderId=${entityId}`, formData, {
+            const checkResponse = await axiosInstance.post(`/planotech-inhouse/file/isExists?folderId=${entityId}`, checkFormData, {
                 headers: {
-                    "Content-Type": "multipart/form-data",
                     Authorization: `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
                 },
             });
-
-            console.log("Files uploaded successfully:", response.data);
-            setUploadStatus("✅ Files uploaded successfully!");
-            fetchFiles(entityId);
+            existsMap = checkResponse?.data?.exists || {};
         } catch (error) {
-            console.error("Error uploading files:", error);
-            setUploadStatus("❌ Error uploading files.");
-        } finally {
+            console.error("Error checking file existence:", error);
+            setUploadStatus(`❌ Failed to check file existence`);
+            return;
+        }
+
+        const existingFiles = Object.values(existsMap);
+        const multipleConflicts = existingFiles.length > 1;
+
+        // Show conflict dialog once for multiple files
+        let bulkDecision = null;
+        if (multipleConflicts) {
+            bulkDecision = await new Promise((resolve) => {
+                setConflictDialog({
+                    open: true,
+                    fileList: existingFiles.map(file => file.fileName),
+                    entityId,
+                    endpoint,
+                    onDecision: resolve,
+                });
+            });
+
+            if (!bulkDecision || bulkDecision === "skipAll") {
+                setUploadStatus("");
+                return;
+            }
+
+            if (bulkDecision === "replaceAll") {
+                setBulkConflictAction("replace");
+            }
+        }
+
+        for (const file of validFiles) {
+            const existEntry = Object.values(existsMap).find(item => item.fileName === file.name);
+
+            // If file doesn't exist, upload normally
+            if (!existEntry || !existEntry.id) {
+                const uploadFormData = new FormData();
+                uploadFormData.append("files", file);
+
+                try {
+                    if (!anyFileUploaded) {
+                        setUploading(true);
+                        setUploadOpen(true);
+                        setUploadStatus("");
+                        anyFileUploaded = true;
+                    }
+
+                    await axiosInstance.post(`${endpoint}?folderId=${entityId}`, uploadFormData, {
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                            Authorization: `Bearer ${token}`,
+                        },
+                    });
+
+                    setUploadStatus(`✅ ${file.name} uploaded successfully`);
+                    uploadedCount++;
+                } catch (error) {
+                    console.error("Upload failed:", error);
+                    setUploadStatus(`❌ ${file.name} upload failed`);
+                }
+                continue;
+            }
+
+            // File exists, ask user for decision
+            const existingFileId = existEntry.id;
+            let userDecision = bulkConflictAction;
+
+            setUploading(false);
+            setUploadOpen(false);
+            if (!multipleConflicts && !bulkConflictAction) {
+                userDecision = await new Promise((resolve) => {
+                    setConflictDialog({
+                        open: true,
+                        file,
+                        fileList: [file.name],
+                        entityId,
+                        endpoint,
+                        onDecision: resolve,
+                    });
+                });
+
+                if (!userDecision || userDecision === "skip") {
+                    skippedCount++;
+                    continue;
+                }
+
+                if (userDecision === "replaceAll" || userDecision === "skipAll") {
+                    setBulkConflictAction(userDecision === "replaceAll" ? "replace" : "skip");
+                }
+            } else if (multipleConflicts) {
+                userDecision = bulkDecision === "replaceAll" ? "replace" : "skip";
+            }
+
+            if (userDecision === "skip" || userDecision === "skipAll") {
+                skippedCount++;
+                continue;
+            }
+
+            if (userDecision === "replace" || userDecision === "replaceAll") {
+                try {
+                    const replaceFormData = new FormData();
+                    replaceFormData.append("replaceFiles", file);
+                    replaceFormData.append("files", existingFileId.toString());
+
+                    if (!anyFileUploaded) {
+                        setUploading(true);
+                        setUploadOpen(true);
+                        setUploadStatus("");
+                        anyFileUploaded = true;
+                    }
+
+                    await axiosInstance.post(`/planotech-inhouse/replaceFile?folderId=${entityId}`, replaceFormData, {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            "Content-Type": "multipart/form-data",
+                        },
+                    });
+
+                    setUploadStatus(`✅ ${file.name} replaced successfully`);
+                    uploadedCount++;
+                } catch (err) {
+                    console.error("Replace failed:", err);
+                    setUploadStatus(`❌ Replace failed: ${file.name}`);
+                    skippedCount++;
+                }
+            }
+        }
+
+        if (anyFileUploaded) {
+            fetchFiles(entityId);
             setUploading(false);
             setTimeout(() => setUploadOpen(false), 3000);
         }
+
+        setBulkConflictAction(null);
+        console.log(`${uploadedCount} uploaded, ${skippedCount} skipped.`);
+    };
+
+    const [bulkConflictAction, setBulkConflictAction] = useState(null);
+    const [conflictDialog, setConflictDialog] = useState({
+        open: false,
+        file: null,
+        entityId: null,
+        endpoint: "",
+    });
+
+    const commonButtonStyles = {
+        fontWeight: "bold",
+        color: "#ba343b",
+        borderColor: "#ba343b",
+        borderRadius: "30px",
+        px: 3,
+        minWidth: "100px",
+        "&:hover": {
+            backgroundColor: "#ba343b",
+            color: "white",
+        },
     };
 
     const getFileIcon = (fileName) => {
@@ -448,13 +644,13 @@ const AllFolders = () => {
                 if (message === "Employess Restricted, Admin use only") {
                     setDeleteMessage("❌ Access Denied! Only admin have access.");
                 } else {
-                    setDeleteMessage(message || "Failed to delete folder!");
+                    setDeleteMessage(message || "Failed to delete file!");
                 }
             } else {
                 setDeleteMessage("An unexpected error occurred!");
             }
 
-            console.error("Error deleting folder:", error);
+            console.error("Error deleting file:", error);
         } finally {
             setDeleting(false);
         }
@@ -483,9 +679,129 @@ const AllFolders = () => {
     const [isAccountsUser, setIsAccountsUser] = useState(true);
     const [twoFactorOpen, setTwoFactorOpen] = useState(false);
     const [twoFactorCode, setTwoFactorCode] = useState(null);
+    const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+    const [submittingOtp, setSubmittingOtp] = useState(false);
     const [authResultOpen, setAuthResultOpen] = useState(false);
     const [authResultMessage, setAuthResultMessage] = useState("");
     const [authSuccess, setAuthSuccess] = useState(false);
+
+    const otpRefs = useRef([...Array(6)].map(() => React.createRef()));
+
+    const handleOtpChange = (value, index) => {
+        const digit = value.replace(/\D/, ''); // allow only digits
+        const newOtpDigits = [...otpDigits];
+        newOtpDigits[index] = digit;
+        setOtpDigits(newOtpDigits);
+
+        // Move to next box if digit is entered
+        if (digit && index < otpRefs.current.length - 1) {
+            otpRefs.current[index + 1].current.focus();
+        }
+    };
+
+    const handleSubmitOtp = async () => {
+        const otpCode = otpDigits.join('');
+        if (otpCode.length !== 6) {
+            alert("Please enter the complete 6-digit OTP.");
+            return;
+        }
+
+        setSubmittingOtp(true);
+        try {
+            await axiosInstance.post(`/planotech-inhouse/accounts/verify-2fa?code=${otpCode}`, {}, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            await axiosInstance.get('/planotech-inhouse/get/accounts/dashboard', {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            setAuthSuccess(true);
+            setAuthResultMessage("Authentication successful. Access granted to Accounts dashboard.");
+            setIsAccountsUser(true);
+            fetchFolders("Accounts");
+        } catch (err) {
+            console.error(err);
+            setAuthSuccess(false);
+            setAuthResultMessage("Authentication failed. Please try again.");
+        } finally {
+            setSubmittingOtp(false);
+            setTwoFactorOpen(false);
+            setAuthResultOpen(true);
+        }
+    };
+
+    const [actionMenuAnchorEl, setActionMenuAnchorEl] = useState(null);
+    const [selectedFolder, setSelectedFolder] = useState(null);
+    const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+    const [renameFolderName, setRenameFolderName] = useState("");
+    const [folderToRename, setFolderToRename] = useState(null);
+
+    const handleActionMenuOpen = (event, folder) => {
+        event.stopPropagation();
+        setActionMenuAnchorEl(event.currentTarget);
+        setSelectedFolder(folder);
+    };
+
+    const handleActionMenuClose = () => {
+        setActionMenuAnchorEl(null);
+        setSelectedFolder(null);
+    };
+
+    const handleRenameOpen = (folder) => {
+        setFolderToRename(folder);
+        setRenameFolderName(folder.folderName);
+        setRenameDialogOpen(true);
+    };
+
+    const handleRenameFolder = async () => {
+        try {
+            await axiosInstance.post(`/planotech-inhouse/rename/folder`, null, {
+                params: {
+                    folderId: folderToRename.entityId,
+                    foldername: renameFolderName
+                },
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            setRenameDialogOpen(false);
+            fetchFolders(selectedCategory); // Refresh list
+        } catch (error) {
+            console.error("Error renaming folder:", error);
+            alert("Failed to rename folder.");
+        }
+    };
+
+    const [renameFileDialogOpen, setRenameFileDialogOpen] = useState(false);
+    const [renameFileName, setRenameFileName] = useState("");
+    const [fileToRename, setFileToRename] = useState(null);
+
+    const handleRenameFile = async () => {
+        if (!fileToRename) return;
+
+        const trimmedBaseName = renameFileName.trim().replace(/\.[^/.]+$/, "");
+
+        const newFileName = trimmedBaseName;
+        console.log("Renaming to:", newFileName);
+
+        try {
+            await axiosInstance.post(`/planotech-inhouse/rename/file`, null, {
+                params: {
+                    fileId: fileToRename.id,
+                    filename: newFileName
+                },
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            setRenameFileDialogOpen(false);
+            fetchFiles(openFolder);
+        } catch (error) {
+            console.error("Failed to rename file:", error);
+        }
+    };
 
     return (
         <>
@@ -548,12 +864,19 @@ const AllFolders = () => {
                                 maxWidth: 600,
                             }}
                         >
-                            {['IT', 'Design', 'Marketing', 'Accounts'].map((label) => (
+                            {['Admin', 'IT', 'Design', 'Marketing', 'Accounts'].map((label) => (
                                 <Button
                                     key={label}
                                     variant={selectedCategory === label ? 'contained' : 'outlined'}
                                     onClick={async () => {
                                         setSelectedCategory(label);
+
+                                        const backendCategory =
+                                            label === 'Marketing' ? 'Sales and Marketing' :
+                                                label === 'Accounts' ? 'Finance and Accounts' :
+                                                    label === 'Admin' ? 'Administration' :
+                                                        label;
+
                                         if (label === 'Accounts') {
                                             try {
                                                 const response = await axiosInstance.get('/planotech-inhouse/accounts/verify-access', {
@@ -569,7 +892,7 @@ const AllFolders = () => {
                                                     setFolders([]);
                                                 } else if (response.data.code === 200 && response.data.sessionValid === true) {
                                                     setIsAccountsUser(true);
-                                                    fetchFolders(label);
+                                                    fetchFolders(backendCategory);
                                                 } else {
                                                     setIsAccountsUser(false);
                                                     setFolders([]);
@@ -580,7 +903,7 @@ const AllFolders = () => {
                                             }
                                         } else {
                                             setIsAccountsUser(true);
-                                            fetchFolders(label);
+                                            fetchFolders(backendCategory);
                                         }
                                     }}
                                     sx={{
@@ -609,7 +932,8 @@ const AllFolders = () => {
 
                 {/* If a folder is open, show its content */}
                 {openFolder ? (
-                    <Box sx={{ mt: 2 }}>
+                    <Box {...getRootProps()} sx={{ mt: 2, minHeight: '600px', border: '2px #ccc' }}>
+                        <input {...getInputProps()} />
                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                             <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 'bold' }}>
                                 {filteredFolders.find(f => f.entityId === openFolder)?.folderName || "Folder"}
@@ -783,15 +1107,48 @@ const AllFolders = () => {
                                                 </Tooltip>
                                                 <Tooltip>
                                                     <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 1 }}>
-                                                        <IconButton
-                                                            onClick={(event) => {
-                                                                event.stopPropagation();
-                                                                handleDeleteFile(file, openFolder);
-                                                            }}
-                                                            sx={{ color: "gray" }}
-                                                        >
-                                                            <DeleteIcon />
+                                                        <IconButton onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setActionMenuAnchorEl(e.currentTarget);
+                                                            setFileToRename(file);
+                                                        }}>
+                                                            <MoreVertIcon />
                                                         </IconButton>
+                                                        <Menu
+                                                            anchorEl={actionMenuAnchorEl}
+                                                            open={Boolean(actionMenuAnchorEl) && fileToRename?.id === file.id}
+                                                            onClose={(e, reason) => {
+                                                                if (e?.stopPropagation) e.stopPropagation();
+                                                                setActionMenuAnchorEl(null);
+                                                                setFileToRename(null);
+                                                            }}
+                                                            PaperProps={{
+                                                                elevation: 0,
+                                                                sx: {
+                                                                    boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.08)',
+                                                                    border: '1px solid #e0e0e0',
+                                                                    borderRadius: 1,
+                                                                },
+                                                                onClick: (e) => e.stopPropagation(),
+                                                            }}
+                                                        >
+                                                            <MenuItem onClick={() => {
+                                                                setRenameFileDialogOpen(true);
+                                                                setRenameFileName(file.fileName.split('.').slice(0, -1).join('.'));
+                                                                setActionMenuAnchorEl(null);
+                                                            }}>
+                                                                <EditIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
+                                                                Rename
+                                                            </MenuItem>
+                                                            <MenuItem
+                                                                onClick={() => {
+                                                                    setActionMenuAnchorEl(null);
+                                                                    handleDeleteFile(file, openFolder);
+                                                                }}                                                            >
+                                                                <DeleteIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
+                                                                Delete
+                                                            </MenuItem>
+                                                        </Menu>
                                                     </Box>
                                                 </Tooltip>
                                                 <ClickAwayListener onClickAway={() => setOpenTooltipId(null)}>
@@ -1041,15 +1398,47 @@ const AllFolders = () => {
                                                     </Tooltip>
                                                     <Tooltip>
                                                         <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 1 }}>
-                                                            <IconButton
-                                                                onClick={(event) => {
-                                                                    event.stopPropagation();
-                                                                    handleDeleteFolder(folder.entityId, event);
-                                                                }}
-                                                                sx={{ color: "gray" }}
-                                                            >
-                                                                <DeleteIcon />
+                                                            <IconButton onClick={(e) => handleActionMenuOpen(e, folder)} sx={{ color: "gray", cursor: 'pointer' }}>
+                                                                <MoreVertIcon />
                                                             </IconButton>
+                                                            <Menu
+                                                                anchorEl={actionMenuAnchorEl}
+                                                                open={Boolean(actionMenuAnchorEl)}
+                                                                onClose={(e, reason) => {
+                                                                    if (e?.stopPropagation) e.stopPropagation();
+                                                                    handleActionMenuClose();
+                                                                }}
+                                                                PaperProps={{
+                                                                    elevation: 0,
+                                                                    sx: {
+                                                                        boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.08)',
+                                                                        border: '1px solid #e0e0e0',
+                                                                        borderRadius: 1,
+                                                                    },
+                                                                    onClick: (e) => e.stopPropagation(),
+                                                                }}
+                                                            >
+                                                                <MenuItem
+                                                                    onClick={(event) => {
+                                                                        event.stopPropagation();
+                                                                        handleActionMenuClose();
+                                                                        handleRenameOpen(selectedFolder);
+                                                                    }}
+                                                                >
+                                                                    <EditIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
+                                                                    Rename
+                                                                </MenuItem>
+                                                                <MenuItem
+                                                                    onClick={(event) => {
+                                                                        event.stopPropagation();
+                                                                        handleActionMenuClose();
+                                                                        handleDeleteFolder(selectedFolder.entityId);
+                                                                    }}
+                                                                >
+                                                                    <DeleteIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
+                                                                    Delete
+                                                                </MenuItem>
+                                                            </Menu>
                                                         </Box>
                                                     </Tooltip>
                                                 </ListItem>
@@ -1129,80 +1518,6 @@ const AllFolders = () => {
                     </Box>
                 )}
 
-                <Dialog open={twoFactorOpen} onClose={() => setTwoFactorOpen(false)}>
-                    <DialogTitle sx={{ fontSize: "18px", fontWeight: "bold", color: "#ba343b", textAlign: 'center' }}>Two-Factor Authentication</DialogTitle>
-                    <DialogContent>
-                        <Typography sx={{ fontWeight: 'bold' }}>
-                            You're an accountant, but we need a quick confirmation before giving you access. Please click OK to get access.
-                        </Typography>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setTwoFactorOpen(false)} color="error">Cancel</Button>
-                        <Button
-                            onClick={async () => {
-                                try {
-                                    await axiosInstance.post(`/planotech-inhouse/accounts/verify-2fa?code=${twoFactorCode}`, {}, {
-                                        headers: {
-                                            Authorization: `Bearer ${token}`,
-                                        }
-                                    });
-
-                                    await axiosInstance.get('/planotech-inhouse/get/accounts/dashboard', {
-                                        headers: {
-                                            Authorization: `Bearer ${token}`,
-                                        },
-                                    });
-
-                                    setAuthSuccess(true);
-                                    setAuthResultMessage("Authentication successful. Access granted to Accounts dashboard.");
-                                    setAuthResultMessage("Authentication successful. Access granted to Accounts dashboard.");
-                                    setTimeout(() => {
-                                        setAuthResultOpen(false);
-                                    }, 2000);
-                                    setIsAccountsUser(true);
-                                    fetchFolders("Accounts");
-                                } catch (err) {
-                                    setAuthSuccess(false);
-                                    setAuthResultMessage("Authentication failed. Please try again.");
-                                    setTimeout(() => {
-                                        setAuthResultOpen(false);
-                                    }, 2000);
-                                } finally {
-                                    setTwoFactorOpen(false);
-                                    setAuthResultOpen(true);
-                                }
-                            }}
-                            variant="outlined"
-                            sx={{ fontWeight: 'bold', color: "#ba343b", border: "0.5px solid #ba343b", borderRadius: '16px' }}
-                        >
-                            OK
-                        </Button>
-                    </DialogActions>
-                </Dialog>
-
-                <Dialog open={authResultOpen} onClose={() => setAuthResultOpen(false)}>
-                    <DialogContent>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 1,
-                                mt: 1,
-                            }}
-                        >
-                            {authSuccess ? (
-                                <CheckIcon sx={{ fontSize: 28, color: "#4caf50" }} />
-                            ) : (
-                                <ClearIcon sx={{ fontSize: 28, color: "#f44336" }} />
-                            )}
-                            <Typography sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '16px' }}>
-                                {authResultMessage}
-                            </Typography>
-                        </Box>
-                    </DialogContent>
-                </Dialog>
-
                 {/* Create Folder Dialog */}
                 <Dialog open={open} onClose={handleClose}>
                     <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>
@@ -1235,25 +1550,35 @@ const AllFolders = () => {
                     maxWidth="sm"
                     sx={{ "& .MuiDialog-paper": { width: "450px" } }}
                 >
-                    <DialogContent sx={{ textAlign: "center", p: 3 }}>
+                    <DialogContent fullWidth sx={{ textAlign: "center", p: 3 }}>
                         {uploadStatus.includes("✅") ? (
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
                                 <CheckIcon sx={{ fontSize: 28, color: "#4caf50" }} />
-                                <Typography
-                                    variant="h6"
-                                    sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
-                                >
-                                    Files uploaded successfully!
+                                <Typography variant="h6" sx={{ color: '#232323', fontSize: "18px" }}>
+                                    <strong>
+                                        {
+                                            uploadStatus
+                                                .replace("✅ ", "")
+                                                .replace("❌ ", "")
+                                                .match(/^(.*?)(?=\s(uploaded|replaced|upload failed))/)?.[1]
+                                        }
+                                    </strong>{" "}
+                                    {
+                                        uploadStatus
+                                            .replace("✅ ", "")
+                                            .replace("❌ ", "")
+                                            .match(/\s(uploaded|replaced|upload failed).*$/)?.[0]
+                                    }
                                 </Typography>
                             </Box>
                         ) : uploadStatus.includes("❌") ? (
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
                                 <ClearIcon sx={{ fontSize: 28, color: "#f44336" }} />
-                                <Typography
-                                    variant="h6"
-                                    sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
-                                >
-                                    {uploadStatus.replace("❌ ", "")}
+                                <Typography variant="h6" sx={{ color: '#232323', fontSize: "18px" }} >
+                                    <strong>
+                                        {uploadStatus.split(" ")[1]}
+                                    </strong>{" "}
+                                    {uploadStatus.replace("❌ ", "").replace(uploadStatus.split(" ")[1], "").trim()}
                                 </Typography>
                             </Box>
                         ) : (
@@ -1265,7 +1590,6 @@ const AllFolders = () => {
                                 {uploading ? "Uploading File....." : uploadStatus}
                             </Typography>
                         )}
-
                         {uploading && (
                             <LinearProgress
                                 sx={{
@@ -1295,7 +1619,7 @@ const AllFolders = () => {
                                     variant="h6"
                                     sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
                                 >
-                                    Folder successfully deleted!
+                                    {deleteMessage.replace("✅ ", "")}
                                 </Typography>
                             </Box>
                         ) : deleteMessage.includes("❌") ? (
@@ -1381,6 +1705,244 @@ const AllFolders = () => {
                             />
                         )}
                     </DialogContent>
+                </Dialog>
+
+                <Dialog open={twoFactorOpen} onClose={() => setTwoFactorOpen(false)}>
+                    <DialogTitle sx={{ fontSize: "18px", fontWeight: "bold", color: "#ba343b", textAlign: 'center' }}>
+                        Enter OTP
+                    </DialogTitle>
+                    <DialogContent sx={{ textAlign: "center" }}>
+                        <Typography sx={{ fontWeight: 'bold', mb: 2 }}>
+                            OTP has been sent to your email. Please enter it below.
+                        </Typography>
+                        <Box sx={{ display: "flex", justifyContent: "center", gap: 1 }}>
+                            {otpDigits.map((digit, index) => (
+                                <TextField
+                                    key={index}
+                                    value={digit}
+                                    inputRef={otpRefs.current[index]}
+                                    onChange={(e) => handleOtpChange(e.target.value, index)}
+                                    variant="outlined"
+                                    inputProps={{ maxLength: 1, style: { textAlign: "center", fontSize: "20px" } }}
+                                    sx={{ width: "40px" }}
+                                />
+                            ))}
+                        </Box>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setTwoFactorOpen(false)} color="error">Cancel</Button>
+                        <Button
+                            onClick={handleSubmitOtp}
+                            disabled={submittingOtp}
+                            variant="outlined"
+                            sx={{
+                                fontWeight: "bold",
+                                color: "#ba343b",
+                                borderColor: "#ba343b",
+                                borderRadius: "30px",
+                                px: 3,
+                                "&:hover": {
+                                    backgroundColor: "#ba343b",
+                                    color: "white",
+                                },
+                            }}
+                        >
+                            {submittingOtp ? "Verifying..." : "Submit"}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Dialog open={authResultOpen} onClose={() => setAuthResultOpen(false)}>
+                    <DialogContent>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 1,
+                                mt: 1,
+                            }}
+                        >
+                            {authSuccess ? (
+                                <CheckIcon sx={{ fontSize: 28, color: "#4caf50" }} />
+                            ) : (
+                                <ClearIcon sx={{ fontSize: 28, color: "#f44336" }} />
+                            )}
+                            <Typography sx={{ fontWeight: 'bold', textAlign: 'center', fontSize: '16px' }}>
+                                {authResultMessage}
+                            </Typography>
+                        </Box>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={conflictDialog.open} onClose={() => setConflictDialog({ ...conflictDialog, open: false })}
+                    PaperProps={{
+                        sx: {
+                            borderRadius: 4,
+                        },
+                    }}>
+                    <DialogTitle sx={{ fontSize: "17px", fontWeight: "bold", color: "#ba343b" }}>
+                        File Already Exists
+                    </DialogTitle>
+                    <DialogContent>
+                        {conflictDialog.fileList?.length > 1 ? (
+                            <>
+                                <Typography
+                                    sx={{
+                                        fontSize: "15px",
+                                        mb: 1,
+                                    }}
+                                >
+                                    Multiple files already exist in this folder :
+                                </Typography>
+
+                                <Box
+                                    sx={{
+                                        backgroundColor: "#fff",
+                                        maxHeight: 180,
+                                        overflowY: "auto",
+                                        mb: 1,
+                                    }}
+                                >
+                                    {conflictDialog.fileList.map((name, index) => (
+                                        <Typography
+                                            key={index}
+                                            sx={{
+                                                fontSize: "13px",
+                                                py: 0.7,
+                                                px: 1,
+                                                borderBottom: "1px solid #eee",
+                                                "&:last-child": {
+                                                    borderBottom: "none",
+                                                },
+                                            }}
+                                        >
+                                            📄 <b>{name}</b>
+                                        </Typography>
+                                    ))}
+                                </Box>
+
+                                <Typography sx={{ fontSize: "15px" }}>
+                                    What would you like to do with these files?
+                                </Typography>
+                            </>
+                        ) : (
+                            <Typography sx={{ fontSize: "15px", textAlign: "center" }}>
+                                The file <b>{conflictDialog.file?.name}</b> already exists in this folder.
+                                <br />
+                                What would you like to do?
+                            </Typography>
+                        )}
+                    </DialogContent>
+                    <DialogActions sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1, mb: 1 }}>
+                        {conflictDialog.fileList?.length > 1 ? (
+                            <>
+                                <Button
+                                    onClick={() => {
+                                        conflictDialog.onDecision("skipAll");
+                                        setConflictDialog({ ...conflictDialog, open: false });
+                                    }}
+                                    variant="outlined"
+                                    sx={commonButtonStyles}
+                                >
+                                    Skip All
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        conflictDialog.onDecision("replaceAll");
+                                        setConflictDialog({ ...conflictDialog, open: false });
+                                    }}
+                                    variant="outlined"
+                                    sx={commonButtonStyles}
+                                >
+                                    Replace All
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button
+                                    onClick={() => {
+                                        conflictDialog.onDecision("skip");
+                                        setConflictDialog({ ...conflictDialog, open: false });
+                                    }}
+                                    variant="outlined"
+                                    sx={commonButtonStyles}
+                                >
+                                    Skip
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        conflictDialog.onDecision("replace");
+                                        setConflictDialog({ ...conflictDialog, open: false });
+                                    }}
+                                    variant="outlined"
+                                    sx={commonButtonStyles}
+                                >
+                                    Replace
+                                </Button>
+                            </>
+                        )}
+                    </DialogActions>
+                </Dialog>
+
+                <Dialog fullWidth open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)}>
+                    <Box onClick={(e) => e.stopPropagation()}>
+                        <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>
+                            Rename Folder
+                        </DialogTitle>
+                        <DialogContent>
+                            <TextField
+                                fullWidth
+                                value={renameFolderName}
+                                onChange={(e) => setRenameFolderName(e.target.value)}
+                                placeholder="Rename folder name"
+                            />
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setRenameDialogOpen(false)} color="error">Cancel</Button>
+                            <Button
+                                onClick={handleRenameFolder}
+                                variant="outlined"
+                                sx={{
+                                    borderRadius: "20px",
+                                    fontWeight: "bold",
+                                    color: "#ba343b",
+                                    border: "0.5px solid #ba343b"
+                                }}
+                            >
+                                Rename
+                            </Button>
+                        </DialogActions>
+                    </Box>
+                </Dialog>
+
+                <Dialog fullWidth open={renameFileDialogOpen} onClose={() => setRenameFileDialogOpen(false)}>
+                    <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>
+                        Rename File
+                    </DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            fullWidth
+                            value={renameFileName}
+                            onChange={(e) => setRenameFileName(e.target.value)}
+                            placeholder="Rename file name"
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setRenameFileDialogOpen(false)} color="error">Cancel</Button>
+                        <Button
+                            onClick={handleRenameFile}
+                            variant="outlined"
+                            sx={{
+                                borderRadius: "20px",
+                                fontWeight: "bold",
+                                color: "#ba343b",
+                                border: "0.5px solid #ba343b"
+                            }}
+                        >
+                            Rename
+                        </Button>
+                    </DialogActions>
                 </Dialog>
             </Box>
         </>
