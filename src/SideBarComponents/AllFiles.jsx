@@ -395,35 +395,97 @@ const AllFiles = () => {
                                 <Dialog
                                     open={openOtherCategoryDialog}
                                     onClose={() => setOpenOtherCategoryDialog(false)}
-                                    maxWidth="sm"
+                                    maxWidth="xs"
                                     fullWidth
+                                    PaperProps={{
+                                        sx: {
+                                            borderRadius: 4,
+                                            p: 2,
+                                            width: "500px",
+                                            maxWidth: "90%",
+                                        },
+                                    }}
                                 >
-                                    <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>Enter Other Category</DialogTitle>
-                                    <DialogContent>
+                                    <DialogTitle
+                                        sx={{
+                                            fontSize: "20px",
+                                            fontWeight: "bold",
+                                            color: "#ba343b",
+                                            textAlign: "center",
+                                            mb: 1,
+                                        }}
+                                    >
+                                        Enter Other Category
+                                    </DialogTitle>
+
+                                    <DialogContent
+                                        sx={{
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: 2,
+                                            mt: 1,
+                                        }}
+                                    >
                                         <TextField
                                             autoFocus
                                             margin="dense"
                                             label="Other Category"
+                                            placeholder="Type your category here..."
                                             fullWidth
                                             value={otherCategory}
                                             onChange={(e) => setOtherCategory(e.target.value)}
+                                            variant="outlined"
+                                            sx={{
+                                                "& .MuiOutlinedInput-root": {
+                                                    borderRadius: "12px",
+                                                },
+                                                "& .MuiInputLabel-root": {
+                                                    fontSize: "14px",
+                                                },
+                                            }}
                                         />
                                     </DialogContent>
-                                    <DialogActions>
-                                        <Button onClick={() => setOpenOtherCategoryDialog(false)} sx={{ color: "#ba343b", }}>Cancel</Button>
+
+                                    <DialogActions
+                                        sx={{
+                                            justifyContent: "center",
+                                            mt: 2,
+                                            gap: 2,
+                                        }}
+                                    >
+                                        <Button
+                                            onClick={() => setOpenOtherCategoryDialog(false)}
+                                            sx={{
+                                                color: "#ba343b",
+                                                fontWeight: "bold",
+                                                textTransform: "none",
+                                                borderRadius: "20px",
+                                                px: 4,
+                                                py: 1,
+                                                border: "1px solid #ba343b",
+                                                "&:hover": {
+                                                    backgroundColor: "#f8d7da",
+                                                    borderColor: "#ba343b",
+                                                },
+                                            }}
+                                        >
+                                            Cancel
+                                        </Button>
+
                                         <Button
                                             onClick={handleSubmit}
-                                            variant="outlined"
+                                            variant="contained"
                                             disabled={!otherCategory.trim()}
                                             sx={{
                                                 fontWeight: "bold",
-                                                color: "#ba343b",
-                                                borderColor: "#ba343b",
-                                                borderRadius: "30px",
-                                                px: 3,
+                                                backgroundColor: "#ba343b",
+                                                color: "white",
+                                                textTransform: "none",
+                                                borderRadius: "20px",
+                                                px: 4,
+                                                py: 1,
                                                 "&:hover": {
-                                                    backgroundColor: "#ba343b",
-                                                    color: "white",
+                                                    backgroundColor: "#a52a2a",
                                                 },
                                             }}
                                         >
@@ -431,6 +493,7 @@ const AllFiles = () => {
                                         </Button>
                                     </DialogActions>
                                 </Dialog>
+
 
                                 {selectedFiles.length > 0 && (
                                     <Typography
