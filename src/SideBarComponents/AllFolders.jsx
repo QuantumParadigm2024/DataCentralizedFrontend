@@ -305,51 +305,54 @@ const AllFolders = () => {
         return validFiles;
     };
 
-    // const handleDrop = (acceptedFiles, rejectedFiles) => {
-    //     if (acceptedFiles.length > 0) {
-    //         const smallFiles = [];
-    //         const largeFiles = [];
+    const handleDrop = (acceptedFiles, rejectedFiles) => {
+        setUploading(true);
+        setUploadOpen(true);
+        setUploadStatus("");
+        if (acceptedFiles.length > 0) {
+            const smallFiles = [];
+            const largeFiles = [];
 
-    //         for (const file of acceptedFiles) {
-    //             if (file.size <= MAX_SMALL_FILE_SIZE) {
-    //                 smallFiles.push(file);
-    //             } else if (file.size <= MAX_LARGE_FILE_SIZE) {
-    //                 largeFiles.push(file);
-    //             } else {
-    //                 setUploadStatus(`❌ File "${file.name}" exceeds the 50GB limit and can't be uploaded.`);
-    //                 setUploadOpen(true);
-    //                 setTimeout(() => setUploadOpen(false), 6000);
-    //                 return;
-    //             }
-    //         }
+            for (const file of acceptedFiles) {
+                if (file.size <= MAX_SMALL_FILE_SIZE) {
+                    smallFiles.push(file);
+                } else if (file.size <= MAX_LARGE_FILE_SIZE) {
+                    largeFiles.push(file);
+                } else {
+                    setUploadStatus(`❌ File "${file.name}" exceeds the 50GB limit and can't be uploaded.`);
+                    setUploadOpen(true);
+                    setTimeout(() => setUploadOpen(false), 6000);
+                    return;
+                }
+            }
 
-    //         // Handle small files upload
-    //         const validSmallFiles = handleFileValidation(smallFiles, MAX_SMALL_FILE_SIZE);
-    //         if (validSmallFiles.length > 0) {
-    //             uploadFiles(validSmallFiles, openFolder, "/planotech-inhouse/uploadFile");
-    //         }
+            // Handle small files upload
+            const validSmallFiles = handleFileValidation(smallFiles, MAX_SMALL_FILE_SIZE);
+            if (validSmallFiles.length > 0) {
+                uploadFiles(validSmallFiles, openFolder, "/planotech-inhouse/uploadFile");
+            }
 
-    //         // Handle large files upload
-    //         const validLargeFiles = handleFileValidation(largeFiles, MAX_LARGE_FILE_SIZE);
-    //         if (validLargeFiles.length > 0) {
-    //             uploadFiles(validLargeFiles, openFolder, "/planotech-inhouse/upload/largeFile");
-    //         }
-    //     }
+            // Handle large files upload
+            const validLargeFiles = handleFileValidation(largeFiles, MAX_LARGE_FILE_SIZE);
+            if (validLargeFiles.length > 0) {
+                uploadFiles(validLargeFiles, openFolder, "/planotech-inhouse/upload/largeFile");
+            }
+        }
 
-    //     if (rejectedFiles.length > 0) {
-    //         setUploadStatus("❌ Some files were rejected due to size or format.");
-    //         setUploadOpen(true);
-    //         setTimeout(() => setUploadOpen(false), 5000);
-    //     }
-    // };    
+        if (rejectedFiles.length > 0) {
+            setUploadStatus("❌ Some files were rejected due to size or format.");
+            setUploadOpen(true);
+            setTimeout(() => setUploadOpen(false), 5000);
+        }
+    };
 
-    // const { getRootProps, getInputProps } = useDropzone({
-    //     onDrop: handleDrop,
-    //     noClick: true,
-    //     noKeyboard: true,
-    //     multiple: true,
-    //     maxSize: MAX_LARGE_FILE_SIZE, 
-    // });
+    const { getRootProps, getInputProps } = useDropzone({
+        onDrop: handleDrop,
+        noClick: true,
+        noKeyboard: true,
+        multiple: true,
+        maxSize: MAX_LARGE_FILE_SIZE,
+    });
 
     // ✅ Small File Upload (≤100MB)
     const handleFileUpload = async (event, entityId) => {
@@ -373,114 +376,155 @@ const AllFolders = () => {
         await uploadFiles(validFiles, entityId, "/planotech-inhouse/upload/largeFile");
     };
 
-    // ✅ Reusable Upload Function
     const uploadFiles = async (validFiles, entityId, endpoint) => {
         let anyFileUploaded = false;
         let skippedCount = 0;
         let uploadedCount = 0;
 
-        const existingFiles = files[entityId] || [];
+        if (!validFiles.length) return;
 
-        // Get all conflicting files up front
-        const conflictFiles = validFiles.filter(file =>
-            existingFiles.some(f => f.fileName === file.name)
-        );
+        setUploading(true);
+        setUploadOpen(true);
+        setUploadStatus("");
+        const checkFormData = new FormData();
+        validFiles.forEach(file => checkFormData.append("files", file));
 
-        setConflictFileList(conflictFiles.map(f => f.name));
+        let existsMap = {};
+
+        try {
+            const checkResponse = await axiosInstance.post(`/planotech-inhouse/file/isExists?folderId=${entityId}`, checkFormData, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+            existsMap = checkResponse?.data?.exists || {};
+        } catch (error) {
+            console.error("Error checking file existence:", error);
+            setUploadStatus(`❌ Failed to check file existence`);
+            return;
+        }
+
+        const existingFiles = Object.values(existsMap);
+        const multipleConflicts = existingFiles.length > 1;
+
+        // Show conflict dialog once for multiple files
+        let bulkDecision = null;
+        if (multipleConflicts) {
+            bulkDecision = await new Promise((resolve) => {
+                setConflictDialog({
+                    open: true,
+                    fileList: existingFiles.map(file => file.fileName),
+                    entityId,
+                    endpoint,
+                    onDecision: resolve,
+                });
+            });
+
+            if (!bulkDecision || bulkDecision === "skipAll") {
+                setUploadStatus("");
+                return;
+            }
+
+            if (bulkDecision === "replaceAll") {
+                setBulkConflictAction("replace");
+            }
+        }
 
         for (const file of validFiles) {
-            const isConflict = existingFiles.some(f => f.fileName === file.name);
+            const existEntry = Object.values(existsMap).find(item => item.fileName === file.name);
 
-            if (isConflict && !bulkConflictAction) {
-                const userDecision = await new Promise((resolve) => {
+            // If file doesn't exist, upload normally
+            if (!existEntry || !existEntry.id) {
+                const uploadFormData = new FormData();
+                uploadFormData.append("files", file);
+
+                try {
+                    if (!anyFileUploaded) {
+                        setUploading(true);
+                        setUploadOpen(true);
+                        setUploadStatus("");
+                        anyFileUploaded = true;
+                    }
+
+                    await axiosInstance.post(`${endpoint}?folderId=${entityId}`, uploadFormData, {
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                            Authorization: `Bearer ${token}`,
+                        },
+                    });
+
+                    setUploadStatus(`✅ ${file.name} uploaded successfully`);
+                    uploadedCount++;
+                } catch (error) {
+                    console.error("Upload failed:", error);
+                    setUploadStatus(`❌ ${file.name} upload failed`);
+                }
+                continue;
+            }
+
+            // File exists, ask user for decision
+            const existingFileId = existEntry.id;
+            let userDecision = bulkConflictAction;
+
+            setUploading(false);
+            setUploadOpen(false);
+            if (!multipleConflicts && !bulkConflictAction) {
+                userDecision = await new Promise((resolve) => {
                     setConflictDialog({
                         open: true,
                         file,
-                        fileList: conflictFiles.map(f => f.name),
+                        fileList: [file.name],
                         entityId,
                         endpoint,
                         onDecision: resolve,
                     });
                 });
 
-                if (userDecision === "skip") {
+                if (!userDecision || userDecision === "skip") {
                     skippedCount++;
                     continue;
-                }
-                if (userDecision === "skipAll") {
-                    setBulkConflictAction("skip");
-                    skippedCount++;
-                    continue;
-                }
-                if (userDecision === "replaceAll") {
-                    setBulkConflictAction("replace");
                 }
 
-                if (userDecision === "replace") {
-                    try {
-                        await axiosInstance.post(`/planotech-inhouse/replaceFile`, {}, {
-                            params: {
-                                folderId: entityId,
-                                type: "replace",
-                            },
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                            },
-                        });
-                    } catch (err) {
-                        console.error("Error during replace:", err);
-                        skippedCount++;
-                        continue;
-                    }
+                if (userDecision === "replaceAll" || userDecision === "skipAll") {
+                    setBulkConflictAction(userDecision === "replaceAll" ? "replace" : "skip");
                 }
-            } else if (isConflict && bulkConflictAction) {
-                if (bulkConflictAction === "skip") {
-                    skippedCount++;
-                    continue;
-                }
-                if (bulkConflictAction === "replace") {
-                    try {
-                        await axiosInstance.post(`/planotech-inhouse/replaceFile`, {}, {
-                            params: {
-                                folderId: entityId,
-                                type: "replace",
-                            },
-                            headers: {
-                                Authorization: `Bearer ${token}`,
-                            },
-                        });
-                    } catch (err) {
-                        console.error("Error during replace:", err);
-                        skippedCount++;
-                        continue;
-                    }
-                }
+            } else if (multipleConflicts) {
+                userDecision = bulkDecision === "replaceAll" ? "replace" : "skip";
             }
 
-            // Upload actual file
-            if (!anyFileUploaded) {
-                setUploading(true);
-                setUploadOpen(true);
-                setUploadStatus("Checking file size...");
-                anyFileUploaded = true;
+            if (userDecision === "skip" || userDecision === "skipAll") {
+                skippedCount++;
+                continue;
             }
 
-            const formData = new FormData();
-            formData.append("files", file);
+            if (userDecision === "replace" || userDecision === "replaceAll") {
+                try {
+                    const replaceFormData = new FormData();
+                    replaceFormData.append("replaceFiles", file);
+                    replaceFormData.append("files", existingFileId.toString());
 
-            try {
-                await axiosInstance.post(`${endpoint}?folderId=${entityId}`, formData, {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
+                    if (!anyFileUploaded) {
+                        setUploading(true);
+                        setUploadOpen(true);
+                        setUploadStatus("");
+                        anyFileUploaded = true;
+                    }
 
-                uploadedCount++;
-                setUploadStatus(`✅ File uploaded: ${file.name}`);
-            } catch (error) {
-                console.error("Error uploading file:", error);
-                setUploadStatus(`❌ Failed to upload: ${file.name}`);
+                    await axiosInstance.post(`/planotech-inhouse/replaceFile?folderId=${entityId}`, replaceFormData, {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            "Content-Type": "multipart/form-data",
+                        },
+                    });
+
+                    setUploadStatus(`✅ ${file.name} replaced successfully`);
+                    uploadedCount++;
+                } catch (err) {
+                    console.error("Replace failed:", err);
+                    setUploadStatus(`❌ Replace failed: ${file.name}`);
+                    skippedCount++;
+                }
             }
         }
 
@@ -490,14 +534,11 @@ const AllFolders = () => {
             setTimeout(() => setUploadOpen(false), 3000);
         }
 
-        setBulkConflictAction(null); // reset after one batch
-
-        // Optional: log or toast summary
-        console.log(`${uploadedCount} file(s) uploaded, ${skippedCount} file(s) skipped.`);
+        setBulkConflictAction(null);
+        console.log(`${uploadedCount} uploaded, ${skippedCount} skipped.`);
     };
 
     const [bulkConflictAction, setBulkConflictAction] = useState(null);
-    const [conflictFileList, setConflictFileList] = useState([]);
     const [conflictDialog, setConflictDialog] = useState({
         open: false,
         file: null,
@@ -603,13 +644,13 @@ const AllFolders = () => {
                 if (message === "Employess Restricted, Admin use only") {
                     setDeleteMessage("❌ Access Denied! Only admin have access.");
                 } else {
-                    setDeleteMessage(message || "Failed to delete folder!");
+                    setDeleteMessage(message || "Failed to delete file!");
                 }
             } else {
                 setDeleteMessage("An unexpected error occurred!");
             }
 
-            console.error("Error deleting folder:", error);
+            console.error("Error deleting file:", error);
         } finally {
             setDeleting(false);
         }
@@ -891,7 +932,8 @@ const AllFolders = () => {
 
                 {/* If a folder is open, show its content */}
                 {openFolder ? (
-                    <Box sx={{ mt: 2, minHeight: '600px', border: '2px #ccc' }}>
+                    <Box {...getRootProps()} sx={{ mt: 2, minHeight: '600px', border: '2px #ccc' }}>
+                        <input {...getInputProps()} />
                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                             <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 'bold' }}>
                                 {filteredFolders.find(f => f.entityId === openFolder)?.folderName || "Folder"}
@@ -1508,25 +1550,35 @@ const AllFolders = () => {
                     maxWidth="sm"
                     sx={{ "& .MuiDialog-paper": { width: "450px" } }}
                 >
-                    <DialogContent sx={{ textAlign: "center", p: 3 }}>
+                    <DialogContent fullWidth sx={{ textAlign: "center", p: 3 }}>
                         {uploadStatus.includes("✅") ? (
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
                                 <CheckIcon sx={{ fontSize: 28, color: "#4caf50" }} />
-                                <Typography
-                                    variant="h6"
-                                    sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
-                                >
-                                    Files uploaded successfully!
+                                <Typography variant="h6" sx={{ color: '#232323', fontSize: "18px" }}>
+                                    <strong>
+                                        {
+                                            uploadStatus
+                                                .replace("✅ ", "")
+                                                .replace("❌ ", "")
+                                                .match(/^(.*?)(?=\s(uploaded|replaced|upload failed))/)?.[1]
+                                        }
+                                    </strong>{" "}
+                                    {
+                                        uploadStatus
+                                            .replace("✅ ", "")
+                                            .replace("❌ ", "")
+                                            .match(/\s(uploaded|replaced|upload failed).*$/)?.[0]
+                                    }
                                 </Typography>
                             </Box>
                         ) : uploadStatus.includes("❌") ? (
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
                                 <ClearIcon sx={{ fontSize: 28, color: "#f44336" }} />
-                                <Typography
-                                    variant="h6"
-                                    sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
-                                >
-                                    {uploadStatus.replace("❌ ", "")}
+                                <Typography variant="h6" sx={{ color: '#232323', fontSize: "18px" }} >
+                                    <strong>
+                                        {uploadStatus.split(" ")[1]}
+                                    </strong>{" "}
+                                    {uploadStatus.replace("❌ ", "").replace(uploadStatus.split(" ")[1], "").trim()}
                                 </Typography>
                             </Box>
                         ) : (
@@ -1538,7 +1590,6 @@ const AllFolders = () => {
                                 {uploading ? "Uploading File....." : uploadStatus}
                             </Typography>
                         )}
-
                         {uploading && (
                             <LinearProgress
                                 sx={{
@@ -1568,7 +1619,7 @@ const AllFolders = () => {
                                     variant="h6"
                                     sx={{ color: '#232323', fontSize: "18px", fontWeight: "bold" }}
                                 >
-                                    Folder successfully deleted!
+                                    {deleteMessage.replace("✅ ", "")}
                                 </Typography>
                             </Box>
                         ) : deleteMessage.includes("❌") ? (
@@ -1733,7 +1784,6 @@ const AllFolders = () => {
                     <DialogTitle sx={{ fontSize: "17px", fontWeight: "bold", color: "#ba343b" }}>
                         File Already Exists
                     </DialogTitle>
-
                     <DialogContent>
                         {conflictDialog.fileList?.length > 1 ? (
                             <>
@@ -1784,7 +1834,6 @@ const AllFolders = () => {
                             </Typography>
                         )}
                     </DialogContent>
-
                     <DialogActions sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1, mb: 1 }}>
                         {conflictDialog.fileList?.length > 1 ? (
                             <>
