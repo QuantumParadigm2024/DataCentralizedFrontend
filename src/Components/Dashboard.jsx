@@ -1,10 +1,10 @@
+/* eslint-disable no-unused-vars */
 import React, { useRef, useEffect, useState } from "react";
 import { Box, Grid, IconButton, Drawer, useMediaQuery, useTheme, } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { Outlet } from "react-router-dom";
 import SideBar from "./SideBar";
 import NavColorCode from "./NavColorCode";
-import Logo from "../Assets/Planotech Logo Black.png";
 
 const Dashboard = () => {
     const [drawerOpen, setDrawerOpen] = useState(true);
@@ -54,7 +54,7 @@ const Dashboard = () => {
                     }}
                 >
                     <img
-                        src={Logo}
+                        src="https://quantumshare.quantumparadigm.in/vedio/Planotech_Logo_Black.png"
                         alt="Company Logo"
                         style={{ width: "100%", height: "100%", objectFit: "contain" }}
                     />
