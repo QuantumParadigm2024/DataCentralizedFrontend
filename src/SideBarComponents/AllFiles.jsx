@@ -40,7 +40,6 @@ const AllFiles = () => {
     const dispatch = useDispatch();
     const categories = useSelector((state) => state.category.categories);
 
-
     const decryptToken = (encryptedToken) => {
         try {
             const bytes = CryptoJS.AES.decrypt(encryptedToken, secretKey);
@@ -50,12 +49,12 @@ const AllFiles = () => {
             return null;
         }
     };
-    const [otherCategory, setOtherCategory] = useState('');
-    const [openOtherCategoryDialog, setOpenOtherCategoryDialog] = useState(false);
-
 
     const encryptedToken = sessionStorage.getItem("dc");
     const token = decryptToken(encryptedToken);
+
+    const [otherCategory, setOtherCategory] = useState('');
+    const [openOtherCategoryDialog, setOpenOtherCategoryDialog] = useState(false);
 
     const handleOpenUploadDialog = () => {
         setOpenUploadDialog(true);

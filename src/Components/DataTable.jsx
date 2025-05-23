@@ -65,7 +65,7 @@ const DataTable = ({ data, refreshData, searchTerm, category }) => {
     };
 
     useEffect(() => {
-        fetchData(); 
+        fetchData();
     }, [refreshData]);
 
     const fetchData = async (newPageNo = pageNo) => {
@@ -355,10 +355,7 @@ const DataTable = ({ data, refreshData, searchTerm, category }) => {
                                         </a>
                                     </TableCell>
                                     <TableCell>
-                                        {/^([6-9])\d{9}$/.test(row.phoneNumber) &&
-                                            row.phoneNumber.length === 10
-                                            ? `+91${row.phoneNumber}`
-                                            : "Wrong Number"}
+                                        {row.phoneNumber}
                                     </TableCell>
                                     <TableCell onClick={() => handleRowClick(row.id)}>
                                         {highlightSearch(truncateText(row.designation, expandedRows[row.id]), searchTerm)}

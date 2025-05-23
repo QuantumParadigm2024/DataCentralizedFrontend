@@ -9,24 +9,52 @@ import FolderCopyTwoToneIcon from '@mui/icons-material/FolderCopyTwoTone';
 import StarTwoToneIcon from '@mui/icons-material/StarTwoTone';
 import ContactPageTwoToneIcon from '@mui/icons-material/ContactPageTwoTone';
 import LeaderboardTwoToneIcon from '@mui/icons-material/LeaderboardTwoTone';
+import axiosInstance from "../Helper/AxiosInstance";
+import CryptoJS from "crypto-js";
+import { secretKey } from "../Helper/SecretKey";
 
 const SideBar = ({ drawerOpen, setDrawerOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [activeItem, setActiveItem] = useState("");
 
+    const decryptToken = (encryptedToken) => {
+        try {
+            const bytes = CryptoJS.AES.decrypt(encryptedToken, secretKey);
+            return bytes.toString(CryptoJS.enc.Utf8);
+        } catch (error) {
+            console.error("Error decrypting token:", error);
+            return null;
+        }
+    };
+
+    const encryptedToken = sessionStorage.getItem("dc");
+    const token = decryptToken(encryptedToken);
+
     useEffect(() => {
-        const path = location.pathname.split("/").pop(); // get last segment
-        setActiveItem(path || "files"); // default to 'files' if blank
+        const path = location.pathname.split("/").pop();
+        setActiveItem(path || "files");
     }, [location.pathname]);
 
     const handleNavigation = (key) => {
         navigate(`/dashboard/${key}`);
     };
 
-    const handleLogout = () => {
-        sessionStorage.removeItem("dc");
-        navigate("/");
+    const handleLogout = async () => {
+        try {
+            await axiosInstance.post("/planotech-inhouse/user/logout", {}, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            });
+            sessionStorage.removeItem("dc");
+            navigate("/");
+        } catch (error) {
+            console.error("Logout failed:", error);
+            sessionStorage.removeItem("dc");
+            navigate("/");
+        }
     };
 
     return (

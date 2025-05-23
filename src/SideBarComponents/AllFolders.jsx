@@ -1,9 +1,10 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef } from "react";
-import { LinearProgress, Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton, Menu, MenuItem } from "@mui/material";
+import { LinearProgress, CircularProgress, Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton, Menu, MenuItem } from "@mui/material";
 import { Search, ViewList, GridView, Folder as FolderIcon, UploadFile, Star, StarBorder } from "@mui/icons-material";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
+import CreateNewFolderOutlinedIcon from '@mui/icons-material/CreateNewFolderOutlined';
 import axiosInstance from "../Helper/AxiosInstance";
 import ArrowBackIosRoundedIcon from '@mui/icons-material/ArrowBackIosRounded';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
@@ -43,6 +44,7 @@ const AllFolders = () => {
     const [starredFolders, setStarredFolders] = useState([]);
     const [starredFiles, setStarredFiles] = useState([]);
     const [anchorEl, setAnchorEl] = useState(null);
+    const [categoryLoading, setCategoryLoading] = useState(false);
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -95,6 +97,9 @@ const AllFolders = () => {
                 });
             }
             setStarredFolders(updatedStarredFolders);
+            if (currentFolderId) {
+                fetchFiles(currentFolderId);
+            }
         } catch (error) {
             console.error("Error toggling star:", error);
         }
@@ -247,9 +252,60 @@ const AllFolders = () => {
         }
     };
 
-    const handleFolderClick = (entityId) => {
-        setOpenFolder(entityId);
+    const [currentFolderId, setCurrentFolderId] = useState(null);
+    const [currentFolderName, setCurrentFolderName] = useState('');
+    const [subfolders, setSubfolders] = useState({});
+
+    const handleCreateSubfolder = async () => {
+        setOpen(false);
+        try {
+            await axiosInstance.post(`/planotech-inhouse/create/subfolder/${folderName}?rootFolderId=${currentFolderId}`, {}, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            });
+            setCreateFolder("✅ Folder created successfully!");
+            setFolderName("");
+            handleClose();
+            fetchFiles(currentFolderId);
+        } catch (error) {
+            console.error("Error creating subfolder:", error);
+        }
     };
+
+    const [folderHistory, setFolderHistory] = useState([]);
+
+    const handleFolderClick = (folder) => {
+        if (currentFolderId) {
+            setFolderHistory((prev) => [...prev, { entityId: currentFolderId, folderName: currentFolderName }]);
+        }
+        setOpenFolder(folder.entityId);
+        setCurrentFolderId(folder.entityId);
+        setCurrentFolderName(folder.folderName);
+        fetchFiles(folder.entityId);
+    };
+
+    const openFolderDirectly = (folder) => {
+        setOpenFolder(folder.entityId);
+        setCurrentFolderId(folder.entityId);
+        setCurrentFolderName(folder.folderName);
+        fetchFiles(folder.entityId);
+    };
+
+    const handleBackClick = () => {
+        if (folderHistory.length > 0) {
+            const previous = folderHistory[folderHistory.length - 1];
+            setFolderHistory((prev) => prev.slice(0, -1));
+            openFolderDirectly(previous);
+        } else {
+            setOpenFolder(null);
+            setCurrentFolderId(null);
+            setCurrentFolderName('');
+        }
+    };
+
+    const [combinedItems, setCombinedItems] = useState([]);
 
     const fetchFiles = async (entityId) => {
         try {
@@ -258,12 +314,23 @@ const AllFolders = () => {
                     Authorization: `Bearer ${token}`,
                 },
             });
-            setFiles(prevFiles => ({
-                ...prevFiles,
-                [entityId]: response.data.files
+
+            const { files: fetchedFiles, subFolder } = response.data;
+
+            const foldersWithType = (subFolder || []).map(folder => ({ ...folder, type: 'folder' }));
+            const filesWithType = (fetchedFiles || []).map(file => ({ ...file, type: 'file' }));
+
+            const combined = [...foldersWithType, ...filesWithType];
+
+            setCombinedItems(prev => ({
+                ...prev,
+                [entityId]: combined
             }));
+
+            setFiles(prev => ({ ...prev, [entityId]: fetchedFiles || [] }));
+            setSubfolders(prev => ({ ...prev, [entityId]: subFolder || [] }));
         } catch (error) {
-            console.error("Error fetching files:", error);
+            console.error("Error fetching files and subfolders:", error);
         }
     };
 
@@ -595,7 +662,10 @@ const AllFolders = () => {
             });
 
             setDeleteMessage("✅ Folder successfully deleted!");
-            fetchFolders();
+            fetchFolders(selectedCategory);
+            if (openFolder) {
+                fetchFiles(openFolder);
+            }
         } catch (error) {
             if (error.response && error.response.data) {
                 const { message } = error.response.data;
@@ -680,10 +750,12 @@ const AllFolders = () => {
     const [twoFactorOpen, setTwoFactorOpen] = useState(false);
     const [twoFactorCode, setTwoFactorCode] = useState(null);
     const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+    const [otpCategory, setOtpCategory] = useState("");
     const [submittingOtp, setSubmittingOtp] = useState(false);
     const [authResultOpen, setAuthResultOpen] = useState(false);
     const [authResultMessage, setAuthResultMessage] = useState("");
     const [authSuccess, setAuthSuccess] = useState(false);
+    const [isHrUser, setIsHrUser] = useState(false);
 
     const otpRefs = useRef([...Array(6)].map(() => React.createRef()));
 
@@ -702,24 +774,30 @@ const AllFolders = () => {
     const handleSubmitOtp = async () => {
         const otpCode = otpDigits.join('');
         if (otpCode.length !== 6) {
-            alert("Please enter the complete 6-digit OTP.");
+            // alert("Please enter the complete 6-digit OTP.");
             return;
         }
 
         setSubmittingOtp(true);
         try {
-            await axiosInstance.post(`/planotech-inhouse/accounts/verify-2fa?code=${otpCode}`, {}, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            await axiosInstance.get('/planotech-inhouse/get/accounts/dashboard', {
+            await axiosInstance.post(`/planotech-inhouse/verify-2fa?code=${otpCode}`, {}, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
             setAuthSuccess(true);
-            setAuthResultMessage("Authentication successful. Access granted to Accounts dashboard.");
-            setIsAccountsUser(true);
-            fetchFolders("Accounts");
+            setAuthResultMessage(`Authentication successful. Access granted to ${otpCategory} dashboard.`);
+
+            if (otpCategory === "Accounts") {
+                setIsAccountsUser(true);
+            } else if (otpCategory === "HR") {
+                setIsHrUser(true);
+            }
+
+            const backendCategory =
+                otpCategory === "Accounts" ? "Finance and Accounts" :
+                    otpCategory === "HR" ? "HR" : otpCategory;
+
+            fetchFolders(backendCategory);
         } catch (err) {
             console.error(err);
             setAuthSuccess(false);
@@ -728,6 +806,7 @@ const AllFolders = () => {
             setSubmittingOtp(false);
             setTwoFactorOpen(false);
             setAuthResultOpen(true);
+            setOtpDigits(["", "", "", "", "", ""]);
         }
     };
 
@@ -766,10 +845,10 @@ const AllFolders = () => {
                 }
             });
             setRenameDialogOpen(false);
-            fetchFolders(selectedCategory); // Refresh list
+            fetchFolders(selectedCategory);
+            fetchFiles(openFolder);
         } catch (error) {
             console.error("Error renaming folder:", error);
-            alert("Failed to rename folder.");
         }
     };
 
@@ -779,12 +858,9 @@ const AllFolders = () => {
 
     const handleRenameFile = async () => {
         if (!fileToRename) return;
-
         const trimmedBaseName = renameFileName.trim().replace(/\.[^/.]+$/, "");
-
         const newFileName = trimmedBaseName;
         console.log("Renaming to:", newFileName);
-
         try {
             await axiosInstance.post(`/planotech-inhouse/rename/file`, null, {
                 params: {
@@ -795,12 +871,79 @@ const AllFolders = () => {
                     Authorization: `Bearer ${token}`
                 }
             });
-
             setRenameFileDialogOpen(false);
             fetchFiles(openFolder);
         } catch (error) {
             console.error("Failed to rename file:", error);
         }
+    };
+
+    const [searchResults, setSearchResults] = useState(null);
+    const [isSearching, setIsSearching] = useState(false);
+    const searchCounterRef = useRef(0);
+
+    const handleSearchChange = async (e) => {
+        const text = e.target.value;
+        setSearchTerm(text);
+
+        if (text.trim().length === 0) {
+            setIsSearching(false);
+            setSearchResults(null);
+            return;
+        }
+        const currentVersion = ++searchCounterRef.current;
+        try {
+            setIsSearching(true);
+            const response = await axiosInstance.get(`/planotech-inhouse/search/inFolders`, {
+                params: { searchText: text },
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            // Only accept result if it's the latest version
+            if (currentVersion === searchCounterRef.current) {
+                setSearchResults(response.data);
+                console.log("Search Results (Files):", response.data?.files);
+                console.log("Expected Key:", normalizedCategory);
+                console.log("Files under that category:", response.data?.files?.[normalizedCategory]);
+            }
+        } catch (error) {
+            if (currentVersion === searchCounterRef.current) {
+                console.error("Error searching:", error);
+                setSearchResults(null);
+            }
+        }
+    };
+
+    const categoryMap = {
+        "Accounts": "Finance and Accounts",
+        "Marketing": "Sales and Marketing",
+        "Admin": "Administration"
+    };
+
+    const normalizedCategory = categoryMap[selectedCategory] || selectedCategory;
+
+    const foldersToDisplay = isSearching
+        ? (searchResults?.folders?.[normalizedCategory] || [])
+        : (!openFolder ? folders : subfolders[openFolder] || []);
+
+    const filesToDisplay = isSearching
+        ? (searchResults?.files?.[normalizedCategory] || [])
+        : (openFolder ? files[openFolder] || [] : []);
+
+    const highlightText = (text, query) => {
+        if (!query) return text;
+
+        const regex = new RegExp(`(${query})`, 'gi');
+        const parts = text.split(regex);
+        return parts.map((part, index) =>
+            part.toLowerCase() === query.toLowerCase() ? (
+                <mark key={index} style={{ backgroundColor: '#ffc107', padding: '0 2px' }}>{part}</mark>
+            ) : (
+                <span key={index}>{part}</span>
+            )
+        );
     };
 
     return (
@@ -819,10 +962,10 @@ const AllFolders = () => {
                             <TextField
                                 variant="outlined"
                                 size="small"
-                                placeholder={openFolder ? "Search files" : "Search folders"}
+                                placeholder="Search folders and files"
                                 fullWidth
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={handleSearchChange}
                                 InputProps={{
                                     startAdornment: <Search sx={{ color: "gray", mr: 1 }} />,
                                     sx: { borderRadius: 5 },
@@ -835,15 +978,34 @@ const AllFolders = () => {
                                     fullWidth
                                     startIcon={<CreateNewFolderIcon />}
                                     onClick={handleOpen}
-                                    disabled={selectedCategory === "Accounts" && !isAccountsUser}
+                                    disabled={
+                                        (selectedCategory === "Accounts" && !isAccountsUser) ||
+                                        (selectedCategory === "HR" && !isHrUser)
+                                    }
                                     sx={{
                                         fontWeight: "bold",
-                                        bgcolor: selectedCategory === "Accounts" && !isAccountsUser ? '#ededed' : '#ba343b',
+                                        bgcolor:
+                                            (selectedCategory === "Accounts" && !isAccountsUser) ||
+                                                (selectedCategory === "HR" && !isHrUser)
+                                                ? '#ededed'
+                                                : '#ba343b',
                                         '&:hover': {
-                                            bgcolor: selectedCategory === "Accounts" && !isAccountsUser ? '#ededed' : '#9e2b31',
+                                            bgcolor:
+                                                (selectedCategory === "Accounts" && !isAccountsUser) ||
+                                                    (selectedCategory === "HR" && !isHrUser)
+                                                    ? '#ededed'
+                                                    : '#9e2b31',
                                         },
-                                        color: selectedCategory === "Accounts" && !isAccountsUser ? 'white' : 'white',
-                                        cursor: selectedCategory === "Accounts" && !isAccountsUser ? 'not-allowed' : 'pointer',
+                                        color:
+                                            (selectedCategory === "Accounts" && !isAccountsUser) ||
+                                                (selectedCategory === "HR" && !isHrUser)
+                                                ? 'white'
+                                                : 'white',
+                                        cursor:
+                                            (selectedCategory === "Accounts" && !isAccountsUser) ||
+                                                (selectedCategory === "HR" && !isHrUser)
+                                                ? 'not-allowed'
+                                                : 'pointer',
                                     }}
                                 >
                                     Create Folder
@@ -861,16 +1023,16 @@ const AllFolders = () => {
                                 borderRadius: '18px',
                                 overflow: 'hidden',
                                 border: '1px solid #c4c4c4',
-                                maxWidth: 600,
+                                maxWidth: 800,
                             }}
                         >
-                            {['Admin', 'IT', 'Design', 'Marketing', 'Accounts'].map((label) => (
+                            {['Admin', 'HR', 'IT', 'Design', 'Marketing', 'Accounts'].map((label) => (
                                 <Button
                                     key={label}
                                     variant={selectedCategory === label ? 'contained' : 'outlined'}
                                     onClick={async () => {
+                                        setCategoryLoading(true);
                                         setSelectedCategory(label);
-
                                         const backendCategory =
                                             label === 'Marketing' ? 'Sales and Marketing' :
                                                 label === 'Accounts' ? 'Finance and Accounts' :
@@ -879,7 +1041,7 @@ const AllFolders = () => {
 
                                         if (label === 'Accounts') {
                                             try {
-                                                const response = await axiosInstance.get('/planotech-inhouse/accounts/verify-access', {
+                                                const response = await axiosInstance.get('/planotech-inhouse/verify-access/accounts', {
                                                     headers: {
                                                         Authorization: `Bearer ${token}`,
                                                     },
@@ -888,7 +1050,7 @@ const AllFolders = () => {
                                                 if (response.data.code === 200 && response.data.sessionValid === false) {
                                                     setTwoFactorCode(response.data.twoFactorCode);
                                                     setTwoFactorOpen(true);
-                                                    setIsAccountsUser(false);
+                                                    setOtpCategory(label);
                                                     setFolders([]);
                                                 } else if (response.data.code === 200 && response.data.sessionValid === true) {
                                                     setIsAccountsUser(true);
@@ -900,10 +1062,36 @@ const AllFolders = () => {
                                             } catch (error) {
                                                 setIsAccountsUser(false);
                                                 setFolders([]);
+                                            } finally {
+                                                setCategoryLoading(false);
+                                            }
+                                        } else if (label === 'HR') {
+                                            try {
+                                                const response = await axiosInstance.get('/planotech-inhouse/verify-access/hr', {
+                                                    headers: { Authorization: `Bearer ${token}` },
+                                                });
+
+                                                if (response.data.code === 200 && response.data.sessionValid === false) {
+                                                    setTwoFactorCode(response.data.twoFactorCode);
+                                                    setTwoFactorOpen(true);
+                                                    setOtpCategory(label);
+                                                    setFolders([]);
+                                                } else if (response.data.code === 200 && response.data.sessionValid === true) {
+                                                    setIsHrUser(true);
+                                                    fetchFolders(backendCategory);
+                                                } else {
+                                                    setIsHrUser(false);
+                                                    setFolders([]);
+                                                }
+                                            } catch (error) {
+                                                setIsHrUser(false);
+                                                setFolders([]);
+                                            } finally {
+                                                setCategoryLoading(false);
                                             }
                                         } else {
-                                            setIsAccountsUser(true);
-                                            fetchFolders(backendCategory);
+                                            await fetchFolders(backendCategory);
+                                            setCategoryLoading(false);
                                         }
                                     }}
                                     sx={{
@@ -930,15 +1118,446 @@ const AllFolders = () => {
                     </Box>
                 )}
 
+                {categoryLoading && (
+                    <Box
+                        sx={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            width: '100vw',
+                            height: '100vh',
+                            backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            zIndex: 9999,
+                        }}
+                    >
+                        <CircularProgress sx={{ color: '#ba343b' }} />
+                    </Box>
+                )}
+
                 {/* If a folder is open, show its content */}
-                {openFolder ? (
+                {isSearching ? (
+                    <Box sx={{ mt: 3 }}>
+                        {/* Folders */}
+                        {foldersToDisplay.length > 0 && (
+                            <Box sx={{ width: '100%', mt: 2 }}>
+                                <Typography variant="subtitle1" sx={{ fontSize: '14px', color: 'grey', fontWeight: 'bold', mb: 1 }}>
+                                    Folders
+                                </Typography>
+                                <Box sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '3.5fr 2.5fr 2.5fr 1fr 1fr',
+                                    fontWeight: 'bold',
+                                    bgcolor: '#f5f5f5',
+                                    p: 1,
+                                    borderBottom: '2px solid #ddd',
+                                    borderRadius: '8px',
+                                }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
+                                </Box>
+                                <List>
+                                    {foldersToDisplay.map(folder => (
+                                        <ListItem
+                                            key={folder.entityId}
+                                            sx={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '3.5fr 2.5fr 2.5fr 1fr 1fr',
+                                                alignItems: 'center',
+                                                p: 1.5,
+                                                borderBottom: '1px solid #ddd',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                "&:hover": { bgcolor: "#f9f9f9" }
+                                            }}
+                                            onClick={() => {
+                                                setSearchTerm("");          
+                                                setIsSearching(false);      
+                                                setSearchResults(null);     
+                                                handleFolderClick(folder);  
+                                            }}
+                                        >
+                                            <Box sx={{ display: "flex", alignItems: "center" }}>
+                                                <FolderIcon sx={{ color: "#f8d775", mr: 1 }} />
+                                                <Typography
+                                                    variant="body1"
+                                                    sx={{
+                                                        color: "#555555",
+                                                        fontSize: "14px",
+                                                        fontWeight: "bold",
+                                                        whiteSpace: "nowrap",
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        maxWidth: "200px"
+                                                    }}
+                                                    title={folder.folderName}
+                                                >
+                                                    {highlightText(folder.folderName.length > 20 ? `${folder.folderName.slice(0, 20)}...` : folder.folderName, searchTerm)}
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
+                                                {new Date(folder.time).toLocaleString()}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
+                                                {folder.createdBy || "N/A"}
+                                            </Typography>
+                                            <Tooltip>
+                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                                                    <IconButton
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            toggleFolderStar(folder.entityId);
+                                                        }}
+                                                        disableRipple
+                                                        disableFocusRipple
+                                                        sx={{
+                                                            '&:hover': {
+                                                                backgroundColor: 'transparent',
+                                                            },
+                                                            '&.MuiIconButton-root': {
+                                                                padding: 0,
+                                                            },
+                                                        }}
+                                                    >
+                                                        {starredFolders.some(fav => fav.entityId === folder.entityId) ? (
+                                                            <Star sx={{ color: "gold" }} />
+                                                        ) : (
+                                                            <StarBorder />
+                                                        )}
+                                                    </IconButton>
+                                                </Box>
+                                            </Tooltip>
+                                            <Tooltip>
+                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 1 }}>
+                                                    <IconButton onClick={(e) => handleActionMenuOpen(e, folder)} sx={{ color: "gray", cursor: 'pointer' }}>
+                                                        <MoreVertIcon />
+                                                    </IconButton>
+                                                    <Menu
+                                                        anchorEl={actionMenuAnchorEl}
+                                                        open={Boolean(actionMenuAnchorEl)}
+                                                        onClose={(e, reason) => {
+                                                            if (e?.stopPropagation) e.stopPropagation();
+                                                            handleActionMenuClose();
+                                                        }}
+                                                        PaperProps={{
+                                                            elevation: 0,
+                                                            sx: {
+                                                                boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.08)',
+                                                                border: '1px solid #e0e0e0',
+                                                                borderRadius: 1,
+                                                            },
+                                                            onClick: (e) => e.stopPropagation(),
+                                                        }}
+                                                    >
+                                                        <MenuItem
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                handleActionMenuClose();
+                                                                handleRenameOpen(selectedFolder);
+                                                            }}
+                                                        >
+                                                            <EditIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
+                                                            Rename
+                                                        </MenuItem>
+                                                        <MenuItem
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                handleActionMenuClose();
+                                                                handleDeleteFolder(selectedFolder.entityId);
+                                                            }}
+                                                        >
+                                                            <DeleteIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
+                                                            Delete
+                                                        </MenuItem>
+                                                    </Menu>
+                                                </Box>
+                                            </Tooltip>
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            </Box>
+                        )}
+                        {/* Files */}
+                        {filesToDisplay.length > 0 && (
+                            <Box sx={{ width: '100%', mt: 2 }}>
+                                <Typography variant="subtitle1" sx={{ fontSize: '14px', color: 'grey', fontWeight: 'bold', mb: 1 }}>
+                                    Files
+                                </Typography>
+                                <Box sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '3.5fr 2.5fr 1.5fr 2.5fr 1fr 1fr 1fr',
+                                    fontWeight: 'bold',
+                                    bgcolor: '#f5f5f5',
+                                    p: 1,
+                                    borderBottom: '2px solid #ddd',
+                                    borderRadius: '8px'
+                                }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold', ml: 5 }}>Name</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created Time</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Size</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Created By</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Star</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Share</Typography>
+                                </Box>
+                                <List>
+                                    {filesToDisplay.map(file => (
+                                        <ListItem
+                                            key={file.id}
+                                            sx={{
+                                                display: 'grid',
+                                                gridTemplateColumns: '3.5fr 2.5fr 1.5fr 2.5fr 1fr 1fr 1fr',
+                                                alignItems: 'center',
+                                                p: 1.5,
+                                                borderBottom: '1px solid #ddd',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                "&:hover": { bgcolor: "#f9f9f9" }
+                                            }}
+                                            onClick={() => {
+                                                const imageExtensions = ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "webp"];
+                                                const videoExtensions = ["mp4", "webm", "ogg", "mov", "avi", "mkv"];
+                                                const fileExtension = file.fileName.split('.').pop().toLowerCase();
+
+                                                if (file.type === "application/pdf") {
+                                                    window.open(file.fileLink, '_blank');
+                                                } else if (imageExtensions.includes(fileExtension)) {
+                                                    window.open(file.fileLink, '_blank');
+                                                } else if (videoExtensions.includes(fileExtension)) {
+                                                    window.open(file.fileLink, '_blank');
+                                                } else {
+                                                    const link = document.createElement('a');
+                                                    link.href = file.fileLink;
+                                                    link.download = file.fileName;
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                }
+                                            }}
+                                        >
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                {getFileIcon(file.fileName)}
+                                                <Typography
+                                                    variant="body1"
+                                                    sx={{
+                                                        color: "#555555",
+                                                        fontSize: "14px",
+                                                        fontWeight: "bold",
+                                                        whiteSpace: "nowrap",
+                                                        overflow: "hidden",
+                                                        textOverflow: "ellipsis",
+                                                        maxWidth: "200px"
+                                                    }}
+                                                    title={file.fileName}
+                                                >
+                                                    {highlightText(file.fileName.length > 20 ? `${file.fileName.slice(0, 20)}...` : file.fileName, searchTerm)}
+                                                </Typography>
+                                            </Box>
+                                            <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
+                                                {new Date(file.time).toLocaleString()}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
+                                                {formatFileSize(file.fileSize)}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
+                                                {file.createdBy}
+                                            </Typography>
+                                            <Tooltip>
+                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 0.5 }}>
+                                                    <IconButton
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            toggleFileStar(file.id);
+                                                        }}
+                                                        disableRipple
+                                                        disableFocusRipple
+                                                        sx={{
+                                                            '&:hover': {
+                                                                backgroundColor: 'transparent',
+                                                            },
+                                                            '&.MuiIconButton-root': {
+                                                                padding: 0,
+                                                            },
+                                                        }}
+                                                    >
+                                                        {starredFiles.some(fav => fav.id === file.id) ? (
+                                                            <Star sx={{ color: "gold" }} />
+                                                        ) : (
+                                                            <StarBorder />
+                                                        )}
+                                                    </IconButton>
+                                                </Box>
+                                            </Tooltip>
+                                            <Tooltip>
+                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 1 }}>
+                                                    <IconButton onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setActionMenuAnchorEl(e.currentTarget);
+                                                        setFileToRename(file);
+                                                    }}>
+                                                        <MoreVertIcon />
+                                                    </IconButton>
+                                                    <Menu
+                                                        anchorEl={actionMenuAnchorEl}
+                                                        open={Boolean(actionMenuAnchorEl) && fileToRename?.id === file.id}
+                                                        onClose={(e, reason) => {
+                                                            if (e?.stopPropagation) e.stopPropagation();
+                                                            setActionMenuAnchorEl(null);
+                                                            setFileToRename(null);
+                                                        }}
+                                                        PaperProps={{
+                                                            elevation: 0,
+                                                            sx: {
+                                                                boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.08)',
+                                                                border: '1px solid #e0e0e0',
+                                                                borderRadius: 1,
+                                                            },
+                                                            onClick: (e) => e.stopPropagation(),
+                                                        }}
+                                                    >
+                                                        <MenuItem onClick={() => {
+                                                            setRenameFileDialogOpen(true);
+                                                            setRenameFileName(file.fileName.split('.').slice(0, -1).join('.'));
+                                                            setActionMenuAnchorEl(null);
+                                                        }}>
+                                                            <EditIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
+                                                            Rename
+                                                        </MenuItem>
+                                                        <MenuItem
+                                                            onClick={() => {
+                                                                setActionMenuAnchorEl(null);
+                                                                handleDeleteFile(file, openFolder);
+                                                            }}                                                            >
+                                                            <DeleteIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
+                                                            Delete
+                                                        </MenuItem>
+                                                    </Menu>
+                                                </Box>
+                                            </Tooltip>
+                                            <ClickAwayListener onClickAway={() => setOpenTooltipId(null)}>
+                                                <Box
+                                                    onMouseEnter={() => setOpenTooltipId(file.id)}
+                                                    onMouseLeave={() => setOpenTooltipId(null)}
+                                                    sx={{ display: 'flex', justifyContent: 'flex-start' }}
+                                                >
+                                                    <Tooltip
+                                                        arrow
+                                                        open={openTooltipId === file.id}
+                                                        placement="top"
+                                                        componentsProps={{
+                                                            tooltip: {
+                                                                sx: {
+                                                                    backgroundColor: '#fff',
+                                                                    color: '#333',
+                                                                    p: 1.2,
+                                                                    borderRadius: 2,
+                                                                    boxShadow: 3,
+                                                                    maxWidth: 350,
+                                                                },
+                                                            },
+                                                            arrow: {
+                                                                sx: {
+                                                                    color: '#fff',
+                                                                },
+                                                            },
+                                                        }}
+                                                        title={
+                                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                                <Typography
+                                                                    variant="caption"
+                                                                    sx={{
+                                                                        fontSize: '12px',
+                                                                        fontWeight: 'bold',
+                                                                        color: 'grey',
+                                                                        wordBreak: 'break-all',
+                                                                        flex: 1,
+                                                                    }}
+                                                                >
+                                                                    {file.fileLink}
+                                                                </Typography>
+                                                                <Button
+                                                                    variant="outlined"
+                                                                    size="small"
+                                                                    startIcon={<ContentCopyIcon />}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleCopyLink(file.fileLink, file.id);
+                                                                    }}
+                                                                    sx={{
+                                                                        textTransform: 'none',
+                                                                        fontSize: '12px',
+                                                                        fontWeight: 'bold',
+                                                                        color: '#ba343b',
+                                                                        border: '0.5px solid #ba343b',
+                                                                        whiteSpace: 'nowrap',
+                                                                    }}
+                                                                >
+                                                                    {copiedLinkId === file.id ? 'Copied!' : 'Copy'}
+                                                                </Button>
+                                                            </Box>
+                                                        }
+                                                        PopperProps={{
+                                                            modifiers: [
+                                                                {
+                                                                    name: 'offset',
+                                                                    options: {
+                                                                        offset: [0, 0],
+                                                                    },
+                                                                },
+                                                            ],
+                                                        }}
+                                                    >
+                                                        <IconButton
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            sx={{ color: 'gray' }}
+                                                        >
+                                                            <ShareIcon />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Box>
+                                            </ClickAwayListener>
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            </Box>
+                        )}
+                        {foldersToDisplay.length === 0 && filesToDisplay.length === 0 && (
+                            <Box sx={{ mt: 3, textAlign: 'center' }}>
+                                <Typography sx={{ fontSize: '14px', color: 'gray', fontWeight: 'bold' }}>
+                                    No folders or files match your search.
+                                </Typography>
+                            </Box>
+                        )}
+                    </Box>
+                ) : openFolder ? (
                     <Box {...getRootProps()} sx={{ mt: 2, minHeight: '600px', border: '2px #ccc' }}>
                         <input {...getInputProps()} />
                         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                             <Typography variant="h6" sx={{ fontSize: '16px', fontWeight: 'bold' }}>
-                                {filteredFolders.find(f => f.entityId === openFolder)?.folderName || "Folder"}
+                                {[...folderHistory.map(f => f.folderName), currentFolderName].join(' / ') || 'Folder'}
                             </Typography>
-                            <Box>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                {currentFolderId && (
+                                    <Button
+                                        variant="outlined"
+                                        onClick={() => setOpen(true)}
+                                        startIcon={<CreateNewFolderOutlinedIcon />}
+                                        sx={{
+                                            fontWeight: "bold",
+                                            color: "#ba343b",
+                                            border: "0.5px solid #ba343b",
+                                        }}
+                                    >
+                                        Create Folder
+                                    </Button>
+                                )}
                                 <Button
                                     variant="outlined"
                                     startIcon={<UploadFile />}
@@ -988,18 +1607,23 @@ const AllFolders = () => {
                             </Box>
                         </Box>
 
-                        {filteredFiles && filteredFiles.length > 0 ? (
-                            <Box sx={{ mt: 2 }}>
-                                {/* Title and Back Button in the same row */}
-                                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
-                                    <Typography variant="subtitle1" sx={{ fontSize: '14px', color: 'grey', fontWeight: 'bold' }}>
-                                        Uploaded Files
-                                    </Typography>
-                                    <Button variant="text" startIcon={<ArrowBackIosRoundedIcon sx={{ fontSize: 12, mr: -0.8 }} />} onClick={() => setOpenFolder(null)} sx={{ fontWeight: 'bold' }}>
-                                        Back
-                                    </Button>
-                                </Box>
-                                <Box sx={{ width: '100%' }}>
+                        {combinedItems[openFolder]?.length > 0 ? (
+                            <>
+                                <Box sx={{ mt: 1 }}>
+                                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+                                        <Typography variant="subtitle1" sx={{ fontSize: '14px', color: 'grey', fontWeight: 'bold' }}>
+                                            Folder Contents
+                                        </Typography>
+                                        <Button
+                                            variant="text"
+                                            startIcon={<ArrowBackIosRoundedIcon sx={{ fontSize: 12, mr: -0.8 }} />}
+                                            onClick={handleBackClick}
+                                            sx={{ fontWeight: 'bold' }}
+                                        >
+                                            Back
+                                        </Button>
+                                    </Box>
+
                                     <Box sx={{
                                         display: 'grid',
                                         gridTemplateColumns: '3.5fr 2.5fr 1.5fr 2.5fr 1fr 1fr 1fr',
@@ -1017,10 +1641,11 @@ const AllFolders = () => {
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Actions</Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>Share</Typography>
                                     </Box>
+
                                     <List>
-                                        {filteredFiles.map((file, index) => (
+                                        {combinedItems[openFolder].map(item => (
                                             <ListItem
-                                                key={index}
+                                                key={item.id || item.entityId}
                                                 sx={{
                                                     display: 'grid',
                                                     gridTemplateColumns: '3.5fr 2.5fr 1.5fr 2.5fr 1fr 1fr 1fr',
@@ -1032,28 +1657,31 @@ const AllFolders = () => {
                                                     "&:hover": { bgcolor: "#f9f9f9" }
                                                 }}
                                                 onClick={() => {
-                                                    const imageExtensions = ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "webp"];
-                                                    const videoExtensions = ["mp4", "webm", "ogg", "mov", "avi", "mkv"];
-                                                    const fileExtension = file.fileName.split('.').pop().toLowerCase();
-
-                                                    if (file.type === "application/pdf") {
-                                                        window.open(file.fileLink, '_blank');
-                                                    } else if (imageExtensions.includes(fileExtension)) {
-                                                        window.open(file.fileLink, '_blank');
-                                                    } else if (videoExtensions.includes(fileExtension)) {
-                                                        window.open(file.fileLink, '_blank');
+                                                    if (item.type === 'folder') {
+                                                        handleFolderClick(item);
                                                     } else {
-                                                        const link = document.createElement('a');
-                                                        link.href = file.fileLink;
-                                                        link.download = file.fileName;
-                                                        document.body.appendChild(link);
-                                                        link.click();
-                                                        document.body.removeChild(link);
+                                                        const ext = item.fileName.split('.').pop().toLowerCase();
+                                                        const imageExt = ["jpg", "jpeg", "png", "gif", "webp"];
+                                                        const videoExt = ["mp4", "webm", "ogg", "mov", "avi", "mkv"];
+                                                        if (item.type === "application/pdf" || imageExt.includes(ext) || videoExt.includes(ext)) {
+                                                            window.open(item.fileLink, '_blank');
+                                                        } else {
+                                                            const link = document.createElement('a');
+                                                            link.href = item.fileLink;
+                                                            link.download = item.fileName;
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+                                                        }
                                                     }
                                                 }}
                                             >
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    {getFileIcon(file.fileName)}
+                                                    {item.type === 'folder' ? (
+                                                        <FolderIcon sx={{ color: "#f8d775" }} />
+                                                    ) : (
+                                                        getFileIcon(item.fileName)
+                                                    )}
                                                     <Typography
                                                         variant="body1"
                                                         sx={{
@@ -1065,192 +1693,128 @@ const AllFolders = () => {
                                                             textOverflow: "ellipsis",
                                                             maxWidth: "200px"
                                                         }}
-                                                        title={file.fileName}
+                                                        title={item.folderName || item.fileName}
                                                     >
-                                                        {file.fileName.length > 20 ? `${file.fileName.slice(0, 20)}...` : file.fileName}
+                                                        {(item.folderName || item.fileName)?.slice(0, 20)}
+                                                        {(item.folderName || item.fileName)?.length > 20 ? "..." : ""}
                                                     </Typography>
                                                 </Box>
-                                                <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
-                                                    {new Date(file.time).toLocaleString()}
+                                                <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
+                                                    {new Date(item.time).toLocaleString()}
                                                 </Typography>
-                                                <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
-                                                    {formatFileSize(file.fileSize)}
+                                                <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
+                                                    {item.type === 'file' ? formatFileSize(item.fileSize) : ""}
                                                 </Typography>
-                                                <Typography variant="body2" sx={{ fontSize: '13px', color: 'gray' }}>
-                                                    {file.createdBy}
+                                                <Typography variant="body2" sx={{ fontSize: "13px", color: "gray" }}>
+                                                    {item.createdBy || "N/A"}
                                                 </Typography>
-                                                <Tooltip>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 0.5 }}>
-                                                        <IconButton
-                                                            onClick={(event) => {
-                                                                event.stopPropagation();
-                                                                toggleFileStar(file.id);
-                                                            }}
-                                                            disableRipple
-                                                            disableFocusRipple
-                                                            sx={{
-                                                                '&:hover': {
-                                                                    backgroundColor: 'transparent',
-                                                                },
-                                                                '&.MuiIconButton-root': {
-                                                                    padding: 0,
-                                                                },
-                                                            }}
-                                                        >
-                                                            {starredFiles.some(fav => fav.id === file.id) ? (
-                                                                <Star sx={{ color: "gold" }} />
-                                                            ) : (
-                                                                <StarBorder />
-                                                            )}
-                                                        </IconButton>
-                                                    </Box>
-                                                </Tooltip>
-                                                <Tooltip>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 1 }}>
-                                                        <IconButton onClick={(e) => {
+                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                                                    <IconButton
+                                                        onClick={(e) => {
                                                             e.stopPropagation();
-                                                            setActionMenuAnchorEl(e.currentTarget);
-                                                            setFileToRename(file);
-                                                        }}>
-                                                            <MoreVertIcon />
-                                                        </IconButton>
-                                                        <Menu
-                                                            anchorEl={actionMenuAnchorEl}
-                                                            open={Boolean(actionMenuAnchorEl) && fileToRename?.id === file.id}
-                                                            onClose={(e, reason) => {
-                                                                if (e?.stopPropagation) e.stopPropagation();
-                                                                setActionMenuAnchorEl(null);
-                                                                setFileToRename(null);
-                                                            }}
-                                                            PaperProps={{
-                                                                elevation: 0,
-                                                                sx: {
-                                                                    boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.08)',
-                                                                    border: '1px solid #e0e0e0',
-                                                                    borderRadius: 1,
-                                                                },
-                                                                onClick: (e) => e.stopPropagation(),
-                                                            }}
-                                                        >
-                                                            <MenuItem onClick={() => {
-                                                                setRenameFileDialogOpen(true);
-                                                                setRenameFileName(file.fileName.split('.').slice(0, -1).join('.'));
-                                                                setActionMenuAnchorEl(null);
-                                                            }}>
-                                                                <EditIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
-                                                                Rename
-                                                            </MenuItem>
-                                                            <MenuItem
-                                                                onClick={() => {
-                                                                    setActionMenuAnchorEl(null);
-                                                                    handleDeleteFile(file, openFolder);
-                                                                }}                                                            >
-                                                                <DeleteIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
-                                                                Delete
-                                                            </MenuItem>
-                                                        </Menu>
-                                                    </Box>
-                                                </Tooltip>
-                                                <ClickAwayListener onClickAway={() => setOpenTooltipId(null)}>
-                                                    <Box
-                                                        onMouseEnter={() => setOpenTooltipId(file.id)}
-                                                        onMouseLeave={() => setOpenTooltipId(null)}
-                                                        sx={{ display: 'flex', justifyContent: 'flex-start' }}
+                                                            item.type === 'folder'
+                                                                ? toggleFolderStar(item.entityId)
+                                                                : toggleFileStar(item.id);
+                                                        }}
+                                                        sx={{ padding: 0 }}
                                                     >
-                                                        <Tooltip
-                                                            arrow
-                                                            open={openTooltipId === file.id}
-                                                            placement="top"
-                                                            componentsProps={{
-                                                                tooltip: {
-                                                                    sx: {
-                                                                        backgroundColor: '#fff',
-                                                                        color: '#333',
-                                                                        p: 1.2,
-                                                                        borderRadius: 2,
-                                                                        boxShadow: 3,
-                                                                        maxWidth: 350,
-                                                                    },
-                                                                },
-                                                                arrow: {
-                                                                    sx: {
-                                                                        color: '#fff',
-                                                                    },
-                                                                },
-                                                            }}
-                                                            title={
-                                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                                    <Typography
-                                                                        variant="caption"
-                                                                        sx={{
-                                                                            fontSize: '12px',
-                                                                            fontWeight: 'bold',
-                                                                            color: 'grey',
-                                                                            wordBreak: 'break-all',
-                                                                            flex: 1,
-                                                                        }}
-                                                                    >
-                                                                        {file.fileLink}
-                                                                    </Typography>
-                                                                    <Button
-                                                                        variant="outlined"
-                                                                        size="small"
-                                                                        startIcon={<ContentCopyIcon />}
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleCopyLink(file.fileLink, file.id);
-                                                                        }}
-                                                                        sx={{
-                                                                            textTransform: 'none',
-                                                                            fontSize: '12px',
-                                                                            fontWeight: 'bold',
-                                                                            color: '#ba343b',
-                                                                            border: '0.5px solid #ba343b',
-                                                                            whiteSpace: 'nowrap',
-                                                                        }}
-                                                                    >
-                                                                        {copiedLinkId === file.id ? 'Copied!' : 'Copy'}
-                                                                    </Button>
-                                                                </Box>
+                                                        {(item.type === 'folder'
+                                                            ? starredFolders.some(f => f.entityId === item.entityId)
+                                                            : starredFiles.some(f => f.id === item.id))
+                                                            ? <Star sx={{ color: "gold" }} />
+                                                            : <StarBorder />}
+                                                    </IconButton>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                                                    <IconButton
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (item.type === 'folder') {
+                                                                setSelectedFolder(item);
+                                                                handleActionMenuOpen(e, item);
+                                                            } else {
+                                                                setFileToRename(item);
+                                                                setActionMenuAnchorEl(e.currentTarget);
                                                             }
-                                                            PopperProps={{
-                                                                modifiers: [
-                                                                    {
-                                                                        name: 'offset',
-                                                                        options: {
-                                                                            offset: [0, 0],
-                                                                        },
-                                                                    },
-                                                                ],
-                                                            }}
-                                                        >
-                                                            <IconButton
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                sx={{ color: 'gray' }}
+                                                        }}
+                                                    >
+                                                        <MoreVertIcon />
+                                                    </IconButton>
+                                                </Box>
+                                                <Box>
+                                                    {item.type === 'file' ? (
+                                                        <ClickAwayListener onClickAway={() => setOpenTooltipId(null)}>
+                                                            <Box
+                                                                onMouseEnter={() => setOpenTooltipId(item.id)}
+                                                                onMouseLeave={() => setOpenTooltipId(null)}
                                                             >
-                                                                <ShareIcon />
-                                                            </IconButton>
-                                                        </Tooltip>
-                                                    </Box>
-                                                </ClickAwayListener>
+                                                                <Tooltip
+                                                                    arrow
+                                                                    open={openTooltipId === item.id}
+                                                                    placement="top"
+                                                                    title={
+                                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                                            <Typography
+                                                                                variant="caption"
+                                                                                sx={{
+                                                                                    fontSize: '12px',
+                                                                                    fontWeight: 'bold',
+                                                                                    color: 'grey',
+                                                                                    wordBreak: 'break-all',
+                                                                                    flex: 1,
+                                                                                }}
+                                                                            >
+                                                                                {item.fileLink}
+                                                                            </Typography>
+                                                                            <Button
+                                                                                variant="outlined"
+                                                                                size="small"
+                                                                                startIcon={<ContentCopyIcon />}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    handleCopyLink(item.fileLink, item.id);
+                                                                                }}
+                                                                                sx={{
+                                                                                    textTransform: 'none',
+                                                                                    fontSize: '12px',
+                                                                                    fontWeight: 'bold',
+                                                                                    color: '#ba343b',
+                                                                                    border: '0.5px solid #ba343b',
+                                                                                    whiteSpace: 'nowrap',
+                                                                                }}
+                                                                            >
+                                                                                {copiedLinkId === item.id ? 'Copied!' : 'Copy'}
+                                                                            </Button>
+                                                                        </Box>
+                                                                    }
+                                                                >
+                                                                    <IconButton onClick={(e) => e.stopPropagation()} sx={{ color: 'gray' }}>
+                                                                        <ShareIcon />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            </Box>
+                                                        </ClickAwayListener>
+                                                    ) : null}
+                                                </Box>
                                             </ListItem>
                                         ))}
                                     </List>
                                 </Box>
-                            </Box>
+                            </>
                         ) : (
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 2 }}>
                                 <Typography variant="subtitle1" sx={{ fontSize: '14px', color: 'grey', fontWeight: 'bold' }}>
-                                    No files uploaded yet
+                                    No files or folders found
                                 </Typography>
-                                <Button variant="text" startIcon={<ArrowBackIosRoundedIcon sx={{ fontSize: 12, mr: -0.8 }} />} onClick={() => setOpenFolder(null)} sx={{ fontWeight: 'bold' }}>
+                                <Button variant="text" startIcon={<ArrowBackIosRoundedIcon sx={{ fontSize: 12, mr: -0.8 }} />} onClick={handleBackClick} sx={{ fontWeight: 'bold' }}>
                                     Back
                                 </Button>
                             </Box>)}
                     </Box>
                 ) : (
                     <Box sx={{ mt: 3 }}>
-                        {selectedCategory === "Accounts" && !isAccountsUser && !twoFactorOpen ? (
+                        {((selectedCategory === "Accounts" && !isAccountsUser && !twoFactorOpen) ||
+                            (selectedCategory === "HR" && !isHrUser && !twoFactorOpen)) ? (
                             <Box
                                 sx={{
                                     height: '50vh',
@@ -1263,10 +1827,20 @@ const AllFolders = () => {
                             >
                                 <Typography
                                     variant="h6"
-                                    sx={{ color: 'gray', fontWeight: 'bold', fontSize: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0.5 }}
+                                    sx={{
+                                        color: 'gray',
+                                        fontWeight: 'bold',
+                                        fontSize: '16px',
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        gap: 0.5
+                                    }}
                                 >
                                     <BlockIcon fontSize="small" />
-                                    Access Denied – You are not authorized to view Accounts department.
+                                    {selectedCategory === "Accounts"
+                                        ? "Access Denied – You are not authorized to view Accounts department."
+                                        : "Access Denied – You are not authorized to view HR department."}
                                 </Typography>
                             </Box>
                         ) : (
@@ -1344,7 +1918,7 @@ const AllFolders = () => {
                                                         textOverflow: "ellipsis",
                                                         "&:hover": { bgcolor: "#f9f9f9" }
                                                     }}
-                                                    onClick={() => handleFolderClick(folder.entityId)}
+                                                    onClick={() => handleFolderClick(folder)}
                                                 >
                                                     <Box sx={{ display: "flex", alignItems: "center" }}>
                                                         <FolderIcon sx={{ color: "#f8d775", mr: 1 }} />
@@ -1534,7 +2108,13 @@ const AllFolders = () => {
                     <DialogActions sx={{ padding: "16px" }}>
                         <Button onClick={handleClose} color="error" sx={{ fontSize: "bold" }}>Cancel</Button>
                         <Button
-                            onClick={handleCreateFolder}
+                            onClick={() => {
+                                if (openFolder) {
+                                    handleCreateSubfolder();
+                                } else {
+                                    handleCreateFolder();
+                                }
+                            }}
                             variant="outlined"
                             sx={{ borderRadius: "20px", fontWeight: "bold", color: "#ba343b", border: "0.5px solid #ba343b" }}
                         >
@@ -1944,7 +2524,7 @@ const AllFolders = () => {
                         </Button>
                     </DialogActions>
                 </Dialog>
-            </Box>
+            </Box >
         </>
     );
 };
