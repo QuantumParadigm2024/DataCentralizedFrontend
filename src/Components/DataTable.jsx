@@ -64,9 +64,9 @@ const DataTable = ({ data, refreshData, searchTerm, category }) => {
         return words.length > 2 ? words.slice(0, 2).join(" ") + " ..." : text;
     };
 
-    useEffect(() => {
-        fetchData();
-    }, [refreshData]);
+    // useEffect(() => {
+    //     fetchData();
+    // }, [refreshData]);
 
     const fetchData = async (newPageNo = pageNo) => {
         setLoading(true);
