@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect, useRef } from "react";
-import { LinearProgress, CircularProgress, Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton, Menu, MenuItem } from "@mui/material";
+import { LinearProgress, CircularProgress, Box, Button, Grid, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Typography, List, ListItem, ListItemText, ToggleButton, ToggleButtonGroup, Card, CardContent, Tooltip, Input, IconButton, Menu, MenuItem, Checkbox } from "@mui/material";
 import { Search, ViewList, GridView, Folder as FolderIcon, UploadFile, Star, StarBorder } from "@mui/icons-material";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
 import CreateNewFolderOutlinedIcon from '@mui/icons-material/CreateNewFolderOutlined';
@@ -283,7 +283,7 @@ const AllFolders = () => {
         setOpenFolder(folder.entityId);
         setCurrentFolderId(folder.entityId);
         setCurrentFolderName(folder.folderName);
-        fetchFiles(folder.entityId);
+        // fetchFiles(folder.entityId);
     };
 
     const openFolderDirectly = (folder) => {
@@ -452,19 +452,24 @@ const AllFolders = () => {
 
         setUploading(true);
         setUploadOpen(true);
-        setUploadStatus("");
+        setUploadStatus("Uploading...");
         const checkFormData = new FormData();
         validFiles.forEach(file => checkFormData.append("files", file));
 
         let existsMap = {};
+        let selectedFileNames = [];
 
         try {
-            const checkResponse = await axiosInstance.post(`/planotech-inhouse/file/isExists?folderId=${entityId}`, checkFormData, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "multipart/form-data",
-                },
-            });
+            const checkResponse = await axiosInstance.post(
+                `/planotech-inhouse/file/isExists?folderId=${entityId}`,
+                checkFormData,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "multipart/form-data",
+                    },
+                }
+            );
             existsMap = checkResponse?.data?.exists || {};
         } catch (error) {
             console.error("Error checking file existence:", error);
@@ -474,43 +479,47 @@ const AllFolders = () => {
 
         const existingFiles = Object.values(existsMap);
         const multipleConflicts = existingFiles.length > 1;
-
-        // Show conflict dialog once for multiple files
         let bulkDecision = null;
+        let bulkConflictAction = null;
+
         if (multipleConflicts) {
+            setUploading(false);
+            setUploadOpen(false);
             bulkDecision = await new Promise((resolve) => {
                 setConflictDialog({
                     open: true,
                     fileList: existingFiles.map(file => file.fileName),
                     entityId,
                     endpoint,
+                    selectedFiles: [],
                     onDecision: resolve,
                 });
             });
-
-            if (!bulkDecision || bulkDecision === "skipAll") {
+            if (!bulkDecision) {
                 setUploadStatus("");
                 return;
             }
-
-            if (bulkDecision === "replaceAll") {
-                setBulkConflictAction("replace");
+            selectedFileNames = bulkDecision.selectedFiles || [];
+            if (bulkDecision.action === "replaceAll") {
+                bulkConflictAction = "replace";
+            } else if (bulkDecision.action === "skipAll") {
+                bulkConflictAction = "skip";
             }
+            // Start showing progress again after dialog
+            setUploading(true);
+            setUploadOpen(true);
+            setUploadStatus("Uploading...");
         }
 
         for (const file of validFiles) {
             const existEntry = Object.values(existsMap).find(item => item.fileName === file.name);
-
-            // If file doesn't exist, upload normally
+            // ✅ File does not exist – upload normally
             if (!existEntry || !existEntry.id) {
                 const uploadFormData = new FormData();
                 uploadFormData.append("files", file);
 
                 try {
                     if (!anyFileUploaded) {
-                        setUploading(true);
-                        setUploadOpen(true);
-                        setUploadStatus("");
                         anyFileUploaded = true;
                     }
 
@@ -530,51 +539,46 @@ const AllFolders = () => {
                 continue;
             }
 
-            // File exists, ask user for decision
+            // ⚠️ File exists – need user decision
             const existingFileId = existEntry.id;
             let userDecision = bulkConflictAction;
 
-            setUploading(false);
-            setUploadOpen(false);
+            // For single conflicts (or when bulk action is not yet decided)
             if (!multipleConflicts && !bulkConflictAction) {
-                userDecision = await new Promise((resolve) => {
+                setUploading(false);
+                setUploadOpen(false);
+                const singleDecision = await new Promise((resolve) => {
                     setConflictDialog({
                         open: true,
                         file,
                         fileList: [file.name],
                         entityId,
                         endpoint,
+                        selectedFiles: [],
                         onDecision: resolve,
                     });
                 });
 
-                if (!userDecision || userDecision === "skip") {
+                if (!singleDecision || singleDecision === "skip") {
                     skippedCount++;
                     continue;
                 }
 
-                if (userDecision === "replaceAll" || userDecision === "skipAll") {
-                    setBulkConflictAction(userDecision === "replaceAll" ? "replace" : "skip");
-                }
-            } else if (multipleConflicts) {
-                userDecision = bulkDecision === "replaceAll" ? "replace" : "skip";
+                userDecision = singleDecision === "replace" ? "replace" : "skip";
+                setUploading(true);
+                setUploadOpen(true);
+                setUploadStatus("Uploading...");
             }
 
-            if (userDecision === "skip" || userDecision === "skipAll") {
-                skippedCount++;
-                continue;
-            }
-
-            if (userDecision === "replace" || userDecision === "replaceAll") {
+            const isSelected = selectedFileNames.length === 0 || selectedFileNames.includes(file.name);
+            if ((userDecision === "replace" && isSelected) || (userDecision === "skip" && !isSelected)) {
+                // ✅ Replace the file
                 try {
                     const replaceFormData = new FormData();
                     replaceFormData.append("replaceFiles", file);
                     replaceFormData.append("files", existingFileId.toString());
 
                     if (!anyFileUploaded) {
-                        setUploading(true);
-                        setUploadOpen(true);
-                        setUploadStatus("");
                         anyFileUploaded = true;
                     }
 
@@ -592,25 +596,38 @@ const AllFolders = () => {
                     setUploadStatus(`❌ Replace failed: ${file.name}`);
                     skippedCount++;
                 }
+            } else {
+                // ❌ Skip the file
+                skippedCount++;
             }
         }
 
         if (anyFileUploaded) {
             fetchFiles(entityId);
-            setUploading(false);
             setTimeout(() => setUploadOpen(false), 3000);
+        } else {
+            setUploadOpen(false);
         }
 
-        setBulkConflictAction(null);
+        setUploading(false);
         console.log(`${uploadedCount} uploaded, ${skippedCount} skipped.`);
     };
 
     const [bulkConflictAction, setBulkConflictAction] = useState(null);
+    // const [conflictDialog, setConflictDialog] = useState({
+    //     open: false,
+    //     file: null,
+    //     entityId: null,
+    //     endpoint: "",
+    // });
     const [conflictDialog, setConflictDialog] = useState({
         open: false,
         file: null,
+        fileList: [],
         entityId: null,
         endpoint: "",
+        selectedFiles: [],
+        onDecision: () => { },
     });
 
     const commonButtonStyles = {
@@ -787,14 +804,14 @@ const AllFolders = () => {
             setAuthSuccess(true);
             setAuthResultMessage(`Authentication successful. Access granted to ${otpCategory} dashboard.`);
 
-            if (otpCategory === "Accounts") {
+            if (otpCategory === "Finance and Accounts") {
                 setIsAccountsUser(true);
             } else if (otpCategory === "HR") {
                 setIsHrUser(true);
             }
 
             const backendCategory =
-                otpCategory === "Accounts" ? "Finance and Accounts" :
+                otpCategory === "Finance and Accounts" ? "Finance and Accounts" :
                     otpCategory === "HR" ? "HR" : otpCategory;
 
             fetchFolders(backendCategory);
@@ -846,7 +863,9 @@ const AllFolders = () => {
             });
             setRenameDialogOpen(false);
             fetchFolders(selectedCategory);
-            fetchFiles(openFolder);
+            if (openFolder) {
+                fetchFiles(openFolder);
+            }
         } catch (error) {
             console.error("Error renaming folder:", error);
         }
@@ -979,30 +998,30 @@ const AllFolders = () => {
                                     startIcon={<CreateNewFolderIcon />}
                                     onClick={handleOpen}
                                     disabled={
-                                        (selectedCategory === "Accounts" && !isAccountsUser) ||
+                                        (selectedCategory === "Finance and Accounts" && !isAccountsUser) ||
                                         (selectedCategory === "HR" && !isHrUser)
                                     }
                                     sx={{
                                         fontWeight: "bold",
                                         bgcolor:
-                                            (selectedCategory === "Accounts" && !isAccountsUser) ||
+                                            (selectedCategory === "Finance and Accounts" && !isAccountsUser) ||
                                                 (selectedCategory === "HR" && !isHrUser)
                                                 ? '#ededed'
                                                 : '#ba343b',
                                         '&:hover': {
                                             bgcolor:
-                                                (selectedCategory === "Accounts" && !isAccountsUser) ||
+                                                (selectedCategory === "Finance and Accounts" && !isAccountsUser) ||
                                                     (selectedCategory === "HR" && !isHrUser)
                                                     ? '#ededed'
                                                     : '#9e2b31',
                                         },
                                         color:
-                                            (selectedCategory === "Accounts" && !isAccountsUser) ||
+                                            (selectedCategory === "Finance and Accounts" && !isAccountsUser) ||
                                                 (selectedCategory === "HR" && !isHrUser)
                                                 ? 'white'
                                                 : 'white',
                                         cursor:
-                                            (selectedCategory === "Accounts" && !isAccountsUser) ||
+                                            (selectedCategory === "Finance and Accounts" && !isAccountsUser) ||
                                                 (selectedCategory === "HR" && !isHrUser)
                                                 ? 'not-allowed'
                                                 : 'pointer',
@@ -1023,23 +1042,18 @@ const AllFolders = () => {
                                 borderRadius: '18px',
                                 overflow: 'hidden',
                                 border: '1px solid #c4c4c4',
-                                maxWidth: 800,
+                                maxWidth: 900,
                             }}
                         >
-                            {['Admin', 'HR', 'IT', 'Design', 'Marketing', 'Accounts'].map((label) => (
+                            {['Administration', 'HR', 'IT', 'Design', 'Sales and Marketing', 'Finance and Accounts'].map((label) => (
                                 <Button
                                     key={label}
                                     variant={selectedCategory === label ? 'contained' : 'outlined'}
                                     onClick={async () => {
                                         setCategoryLoading(true);
                                         setSelectedCategory(label);
-                                        const backendCategory =
-                                            label === 'Marketing' ? 'Sales and Marketing' :
-                                                label === 'Accounts' ? 'Finance and Accounts' :
-                                                    label === 'Admin' ? 'Administration' :
-                                                        label;
-
-                                        if (label === 'Accounts') {
+                                        setPageNo(0);
+                                        if (label === 'Finance and Accounts') {
                                             try {
                                                 const response = await axiosInstance.get('/planotech-inhouse/verify-access/accounts', {
                                                     headers: {
@@ -1054,7 +1068,7 @@ const AllFolders = () => {
                                                     setFolders([]);
                                                 } else if (response.data.code === 200 && response.data.sessionValid === true) {
                                                     setIsAccountsUser(true);
-                                                    fetchFolders(backendCategory);
+                                                    fetchFolders(label, 0);
                                                 } else {
                                                     setIsAccountsUser(false);
                                                     setFolders([]);
@@ -1078,7 +1092,7 @@ const AllFolders = () => {
                                                     setFolders([]);
                                                 } else if (response.data.code === 200 && response.data.sessionValid === true) {
                                                     setIsHrUser(true);
-                                                    fetchFolders(backendCategory);
+                                                    fetchFolders(label, 0);
                                                 } else {
                                                     setIsHrUser(false);
                                                     setFolders([]);
@@ -1090,16 +1104,16 @@ const AllFolders = () => {
                                                 setCategoryLoading(false);
                                             }
                                         } else {
-                                            await fetchFolders(backendCategory);
+                                            await fetchFolders(label, 0);
                                             setCategoryLoading(false);
                                         }
                                     }}
                                     sx={{
                                         flex: 1,
-                                        px: 6,
-                                        py: 1,
+                                        px: 2.4,
                                         borderRadius: 0,
                                         fontWeight: 'bold',
+                                        fontSize: '0.75rem',
                                         color: selectedCategory === label ? '#ba343b' : '#ba343b',
                                         backgroundColor: selectedCategory === label ? '#d4d4d4' : 'transparent',
                                         border: 'none',
@@ -1178,10 +1192,10 @@ const AllFolders = () => {
                                                 "&:hover": { bgcolor: "#f9f9f9" }
                                             }}
                                             onClick={() => {
-                                                setSearchTerm("");          
-                                                setIsSearching(false);      
-                                                setSearchResults(null);     
-                                                handleFolderClick(folder);  
+                                                setSearchTerm("");
+                                                setIsSearching(false);
+                                                setSearchResults(null);
+                                                handleFolderClick(folder);
                                             }}
                                         >
                                             <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -1324,14 +1338,14 @@ const AllFolders = () => {
                                             onClick={() => {
                                                 const imageExtensions = ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "webp"];
                                                 const videoExtensions = ["mp4", "webm", "ogg", "mov", "avi", "mkv"];
+                                                const fileType = ["pdf"]
                                                 const fileExtension = file.fileName.split('.').pop().toLowerCase();
-
-                                                if (file.type === "application/pdf") {
-                                                    window.open(file.fileLink, '_blank');
-                                                } else if (imageExtensions.includes(fileExtension)) {
-                                                    window.open(file.fileLink, '_blank');
-                                                } else if (videoExtensions.includes(fileExtension)) {
-                                                    window.open(file.fileLink, '_blank');
+                                                if (
+                                                    fileType.includes(fileExtension) ||
+                                                    imageExtensions.includes(fileExtension) ||
+                                                    videoExtensions.includes(fileExtension)
+                                                ) {
+                                                    window.open(file.fileLink, '_blank', 'noopener,noreferrer');
                                                 } else {
                                                     const link = document.createElement('a');
                                                     link.href = file.fileLink;
@@ -1454,12 +1468,13 @@ const AllFolders = () => {
                                                         componentsProps={{
                                                             tooltip: {
                                                                 sx: {
-                                                                    backgroundColor: '#fff',
-                                                                    color: '#333',
+                                                                    backgroundColor: '#ffffff',
+                                                                    color: '#ffffff',
                                                                     p: 1.2,
                                                                     borderRadius: 2,
                                                                     boxShadow: 3,
                                                                     maxWidth: 350,
+                                                                    backdropFilter: 'none',
                                                                 },
                                                             },
                                                             arrow: {
@@ -1508,7 +1523,7 @@ const AllFolders = () => {
                                                                 {
                                                                     name: 'offset',
                                                                     options: {
-                                                                        offset: [0, 0],
+                                                                        offset: [0, 10],
                                                                     },
                                                                 },
                                                             ],
@@ -1660,11 +1675,16 @@ const AllFolders = () => {
                                                     if (item.type === 'folder') {
                                                         handleFolderClick(item);
                                                     } else {
-                                                        const ext = item.fileName.split('.').pop().toLowerCase();
-                                                        const imageExt = ["jpg", "jpeg", "png", "gif", "webp"];
-                                                        const videoExt = ["mp4", "webm", "ogg", "mov", "avi", "mkv"];
-                                                        if (item.type === "application/pdf" || imageExt.includes(ext) || videoExt.includes(ext)) {
-                                                            window.open(item.fileLink, '_blank');
+                                                        const imageExtensions = ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "webp"];
+                                                        const videoExtensions = ["mp4", "webm", "ogg", "mov", "avi", "mkv"];
+                                                        const pdfExtension = ["pdf"];
+                                                        const fileExtension = item.fileName.split('.').pop().toLowerCase();
+                                                        if (
+                                                            pdfExtension.includes(fileExtension) ||
+                                                            imageExtensions.includes(fileExtension) ||
+                                                            videoExtensions.includes(fileExtension)
+                                                        ) {
+                                                            window.open(item.fileLink, '_blank', 'noopener,noreferrer');
                                                         } else {
                                                             const link = document.createElement('a');
                                                             link.href = item.fileLink;
@@ -1725,21 +1745,70 @@ const AllFolders = () => {
                                                             : <StarBorder />}
                                                     </IconButton>
                                                 </Box>
-                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+                                                <Box sx={{ display: 'flex', justifyContent: 'flex-start', pl: 1 }}>
                                                     <IconButton
                                                         onClick={(e) => {
                                                             e.stopPropagation();
+                                                            setActionMenuAnchorEl(e.currentTarget);
+
                                                             if (item.type === 'folder') {
                                                                 setSelectedFolder(item);
-                                                                handleActionMenuOpen(e, item);
+                                                                setFileToRename(null);
                                                             } else {
                                                                 setFileToRename(item);
-                                                                setActionMenuAnchorEl(e.currentTarget);
+                                                                setSelectedFolder(null);
                                                             }
                                                         }}
                                                     >
                                                         <MoreVertIcon />
                                                     </IconButton>
+                                                    <Menu
+                                                        anchorEl={actionMenuAnchorEl}
+                                                        open={Boolean(actionMenuAnchorEl) && ((item.type === 'folder' && selectedFolder?.entityId === item.entityId) || (item.type !== 'folder' && fileToRename?.id === item.id))}
+                                                        onClose={(e) => {
+                                                            if (e?.stopPropagation) e.stopPropagation();
+                                                            setActionMenuAnchorEl(null);
+                                                            setSelectedFolder(null);
+                                                            setFileToRename(null);
+                                                        }}
+                                                        PaperProps={{
+                                                            elevation: 0,
+                                                            sx: {
+                                                                boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.08)',
+                                                                border: '1px solid #e0e0e0',
+                                                                borderRadius: 1,
+                                                            },
+                                                            onClick: (e) => e.stopPropagation(),
+                                                        }}
+                                                    >
+                                                        <MenuItem
+                                                            onClick={() => {
+                                                                setActionMenuAnchorEl(null);
+                                                                if (item.type === 'folder') {
+                                                                    handleRenameOpen(item); // Folder rename
+                                                                } else {
+                                                                    setRenameFileDialogOpen(true); // File rename
+                                                                    setRenameFileName(item.fileName.split('.').slice(0, -1).join('.'));
+                                                                }
+                                                            }}
+                                                        >
+                                                            <EditIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
+                                                            Rename
+                                                        </MenuItem>
+                                                        <MenuItem
+                                                            onClick={() => {
+                                                                setActionMenuAnchorEl(null);
+                                                                if (item.type === 'folder') {
+                                                                    handleDeleteFolder(item.entityId);
+                                                                } else {
+                                                                    handleDeleteFile(item, openFolder);
+                                                                }
+                                                            }}
+                                                        >
+                                                            <DeleteIcon fontSize="small" sx={{ mr: 1, color: "gray" }} />
+                                                            Delete
+                                                        </MenuItem>
+                                                    </Menu>
                                                 </Box>
                                                 <Box>
                                                     {item.type === 'file' ? (
@@ -1813,7 +1882,7 @@ const AllFolders = () => {
                     </Box>
                 ) : (
                     <Box sx={{ mt: 3 }}>
-                        {((selectedCategory === "Accounts" && !isAccountsUser && !twoFactorOpen) ||
+                        {((selectedCategory === "Finance and Accounts" && !isAccountsUser && !twoFactorOpen) ||
                             (selectedCategory === "HR" && !isHrUser && !twoFactorOpen)) ? (
                             <Box
                                 sx={{
@@ -1838,8 +1907,8 @@ const AllFolders = () => {
                                     }}
                                 >
                                     <BlockIcon fontSize="small" />
-                                    {selectedCategory === "Accounts"
-                                        ? "Access Denied – You are not authorized to view Accounts department."
+                                    {selectedCategory === "Finance and Accounts"
+                                        ? "Access Denied – You are not authorized to view Finance and Accounts department."
                                         : "Access Denied – You are not authorized to view HR department."}
                                 </Typography>
                             </Box>
@@ -1874,7 +1943,7 @@ const AllFolders = () => {
                                     </Grid>
                                 </Grid>
 
-                                {filteredFolders.length === 0 && (selectedCategory !== "Accounts" || (selectedCategory === "Accounts" && isAccountsUser)) && (
+                                {filteredFolders.length === 0 && (selectedCategory !== "Finance and Accounts" || (selectedCategory === "Finance and Accounts" && isAccountsUser)) && (
                                     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
                                         <Typography
                                             color="textSecondary"
@@ -2375,7 +2444,6 @@ const AllFolders = () => {
                                 >
                                     Multiple files already exist in this folder :
                                 </Typography>
-
                                 <Box
                                     sx={{
                                         backgroundColor: "#fff",
@@ -2385,20 +2453,34 @@ const AllFolders = () => {
                                     }}
                                 >
                                     {conflictDialog.fileList.map((name, index) => (
-                                        <Typography
-                                            key={index}
-                                            sx={{
-                                                fontSize: "13px",
-                                                py: 0.7,
-                                                px: 1,
-                                                borderBottom: "1px solid #eee",
-                                                "&:last-child": {
-                                                    borderBottom: "none",
-                                                },
-                                            }}
-                                        >
-                                            📄 <b>{name}</b>
-                                        </Typography>
+                                        <Box key={index} sx={{ display: "flex", alignItems: "center" }}>
+                                            <Checkbox
+                                                checked={conflictDialog.selectedFiles?.includes(name)}
+                                                onChange={(e) => {
+                                                    const updatedSelection = e.target.checked
+                                                        ? [...conflictDialog.selectedFiles, name]
+                                                        : conflictDialog.selectedFiles.filter(f => f !== name);
+                                                    setConflictDialog(prev => ({
+                                                        ...prev,
+                                                        selectedFiles: updatedSelection
+                                                    }));
+                                                }}
+                                                size="small"
+                                            />
+                                            <Typography
+                                                sx={{
+                                                    fontSize: "13px",
+                                                    py: 0.7,
+                                                    px: 1,
+                                                    borderBottom: "1px solid #eee",
+                                                    "&:last-child": {
+                                                        borderBottom: "none",
+                                                    },
+                                                }}
+                                            >
+                                                <b>{name}</b>
+                                            </Typography>
+                                        </Box>
                                     ))}
                                 </Box>
 
@@ -2419,7 +2501,10 @@ const AllFolders = () => {
                             <>
                                 <Button
                                     onClick={() => {
-                                        conflictDialog.onDecision("skipAll");
+                                        conflictDialog.onDecision({
+                                            action: "skipAll",
+                                            selectedFiles: conflictDialog.selectedFiles,
+                                        });
                                         setConflictDialog({ ...conflictDialog, open: false });
                                     }}
                                     variant="outlined"
@@ -2429,7 +2514,10 @@ const AllFolders = () => {
                                 </Button>
                                 <Button
                                     onClick={() => {
-                                        conflictDialog.onDecision("replaceAll");
+                                        conflictDialog.onDecision({
+                                            action: "replaceAll",
+                                            selectedFiles: conflictDialog.selectedFiles,
+                                        });
                                         setConflictDialog({ ...conflictDialog, open: false });
                                     }}
                                     variant="outlined"
