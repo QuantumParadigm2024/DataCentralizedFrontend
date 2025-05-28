@@ -106,7 +106,7 @@ const Login = () => {
                     {/* Left Side - Illustration */}
                     <Box
                         style={{
-                            width: "50%",
+                            width: "70%",
                             display: "flex",
                             flexDirection: "column",
                             justifyContent: "center",
@@ -127,81 +127,83 @@ const Login = () => {
                     </Box>
 
                     {/* Right Side - Login Form */}
-                    <Sheet
-                        sx={{
-                            width: "50%",
-                            padding: "40px",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 2,
-                            borderTopRightRadius: "10px",
-                            borderTopLeftRadius: "0px",
-                            borderBottomRightRadius: "10px",
-                            borderBottomLeftRadius: "0px",
-                            boxShadow: "lg",
-                        }}
-                        variant="outlined"
-                    >
-                        <div>
-                            <Typography level="h3" component="h1" sx={{ fontSize: "24px", fontWeight: "500", color: "#b4b4b4", textAlign: 'center', mb: 1 }}>
-                                <b>Welcome Back!</b>
-                            </Typography>
-                            <Typography level="body-sm" sx={{ textAlign: "center" }}>
-                                Sign in to continue.
-                            </Typography>
-                        </div>
-                        <FormControl error={Boolean(errors.email)}>
-                            <FormLabel>
-                                Email<span style={{ color: "red" }}>*</span>
-                            </FormLabel>
-                            <Input
-                                name="email"
-                                type="email"
-                                placeholder="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                            />
-                            {errors.email && <Typography color="danger" fontSize="sm">{errors.email}</Typography>}
-                        </FormControl>
-
-                        <FormControl error={Boolean(errors.password)}>
-                            <FormLabel>
-                                Password<span style={{ color: "red" }}>*</span>
-                            </FormLabel>
-                            <Input
-                                name="password"
-                                type={showPassword ? "text" : "password"}
-                                placeholder="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                endDecorator={
-                                    <IconButton onClick={() => setShowPassword(!showPassword)}>
-                                        {showPassword ? <VisibilityOff /> : <Visibility />}
-                                    </IconButton>
-                                }
-                            />
-                            {errors.password && <Typography color="danger" fontSize="sm">{errors.password}</Typography>}
-                        </FormControl>
-
-                        <Typography level="body-sm" sx={{ textAlign: "center", color: "red", fontSize: "11px" }}>
-                            Note : Use the same credentials as the Planotech app. This login is only for Planotech employees.
-                        </Typography>
-
-                        <Button
-                            onClick={handleSubmit}
+                    <form onSubmit={handleSubmit}>
+                        <Sheet
                             sx={{
-                                mt: 2,
-                                width: "auto",
-                                backgroundColor: loginLoading ? "#BDBDBD" : "#ba343b",
-                                color: "white",
-                                "&:hover": { backgroundColor: loginLoading ? "#BDBDBD" : "#9e2b31" },
+                                width: "100%",
+                                padding: "40px",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 2,
+                                borderTopRightRadius: "10px",
+                                borderTopLeftRadius: "0px",
+                                borderBottomRightRadius: "10px",
+                                borderBottomLeftRadius: "0px",
+                                boxShadow: "lg",
                             }}
-                            disabled={loginLoading}
-                            variant="contained"
+                            variant="outlined"
                         >
-                            {loginLoading ? <CircularProgress size={24} sx={{ color: "#ba343b" }} /> : "Login"}
-                        </Button>
-                    </Sheet>
+                            <div>
+                                <Typography level="h3" component="h1" sx={{ fontSize: "24px", fontWeight: "500", color: "#b4b4b4", textAlign: 'center', mb: 1 }}>
+                                    <b>Welcome Back!</b>
+                                </Typography>
+                                <Typography level="body-sm" sx={{ textAlign: "center" }}>
+                                    Sign in to continue.
+                                </Typography>
+                            </div>
+                            <FormControl error={Boolean(errors.email)}>
+                                <FormLabel>
+                                    Email<span style={{ color: "red" }}>*</span>
+                                </FormLabel>
+                                <Input
+                                    name="email"
+                                    type="email"
+                                    placeholder="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                />
+                                {errors.email && <Typography color="danger" fontSize="sm">{errors.email}</Typography>}
+                            </FormControl>
+
+                            <FormControl error={Boolean(errors.password)}>
+                                <FormLabel>
+                                    Password<span style={{ color: "red" }}>*</span>
+                                </FormLabel>
+                                <Input
+                                    name="password"
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    endDecorator={
+                                        <IconButton onClick={() => setShowPassword(!showPassword)}>
+                                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                                        </IconButton>
+                                    }
+                                />
+                                {errors.password && <Typography color="danger" fontSize="sm">{errors.password}</Typography>}
+                            </FormControl>
+
+                            <Typography level="body-sm" sx={{ textAlign: "center", color: "red", fontSize: "11px" }}>
+                                Note : Use the same credentials as the Planotech app. This login is only for Planotech employees.
+                            </Typography>
+
+                            <Button
+                                type="submit"
+                                sx={{
+                                    mt: 2,
+                                    width: "auto",
+                                    backgroundColor: loginLoading ? "#BDBDBD" : "#ba343b",
+                                    color: "white",
+                                    "&:hover": { backgroundColor: loginLoading ? "#BDBDBD" : "#9e2b31" },
+                                }}
+                                disabled={loginLoading}
+                                variant="contained"
+                            >
+                                {loginLoading ? <CircularProgress size={24} sx={{ color: "#ba343b" }} /> : "Login"}
+                            </Button>
+                        </Sheet>
+                    </form>
                 </Box>
 
                 <Dialog
@@ -235,7 +237,7 @@ const Login = () => {
                         </Box>
                     </DialogContent>
                 </Dialog>
-            </Box>
+            </Box >
             <ToastContainer />
         </>
     );
