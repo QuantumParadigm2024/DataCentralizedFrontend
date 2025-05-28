@@ -788,6 +788,26 @@ const AllFolders = () => {
         }
     };
 
+    const handleOtpPaste = (e, index) => {
+        e.preventDefault();
+        const pasteData = e.clipboardData.getData("Text").trim();
+        const digits = pasteData.split("").filter(char => /\d/.test(char)); 
+
+        if (digits.length === 0) return;
+
+        const newOtp = [...otpDigits];
+        for (let i = 0; i < digits.length && index + i < newOtp.length; i++) {
+            newOtp[index + i] = digits[i];
+        }
+
+        setOtpDigits(newOtp);
+
+        const nextIndex = index + digits.length;
+        if (nextIndex < otpRefs.current.length) {
+            otpRefs.current[nextIndex].focus();
+        }
+    };
+
     const handleSubmitOtp = async () => {
         const otpCode = otpDigits.join('');
         if (otpCode.length !== 6) {
@@ -1110,7 +1130,8 @@ const AllFolders = () => {
                                     }}
                                     sx={{
                                         flex: 1,
-                                        px: 2.4,
+                                        px: 2.5,
+                                        py: 1,
                                         borderRadius: 0,
                                         fontWeight: 'bold',
                                         fontSize: '0.75rem',
@@ -2163,33 +2184,43 @@ const AllFolders = () => {
 
                 {/* Create Folder Dialog */}
                 <Dialog open={open} onClose={handleClose}>
-                    <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>
+                    <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b", paddingBottom: 0, }}>
                         Create New Folder
                     </DialogTitle>
-                    <DialogContent sx={{ minWidth: "300px", paddingBottom: "16px" }}>
-                        <TextField
-                            fullWidth
-                            value={folderName}
-                            placeholder="enter folder name"
-                            onChange={(e) => setFolderName(e.target.value)}
-                        />
-                    </DialogContent>
-                    <DialogActions sx={{ padding: "16px" }}>
-                        <Button onClick={handleClose} color="error" sx={{ fontSize: "bold" }}>Cancel</Button>
-                        <Button
-                            onClick={() => {
-                                if (openFolder) {
-                                    handleCreateSubfolder();
-                                } else {
-                                    handleCreateFolder();
-                                }
-                            }}
-                            variant="outlined"
-                            sx={{ borderRadius: "20px", fontWeight: "bold", color: "#ba343b", border: "0.5px solid #ba343b" }}
-                        >
-                            Create
-                        </Button>
-                    </DialogActions>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            if (openFolder) {
+                                handleCreateSubfolder();
+                            } else {
+                                handleCreateFolder();
+                            }
+                        }}
+                    >
+                        <DialogContent sx={{ minWidth: "300px", paddingBottom: "16px" }}>
+                            <TextField
+                                fullWidth
+                                value={folderName}
+                                placeholder="enter folder name"
+                                onChange={(e) => setFolderName(e.target.value)}
+                            />
+                        </DialogContent>
+                        <DialogActions sx={{ padding: "16px" }}>
+                            <Button onClick={handleClose} color="error" sx={{ fontSize: "bold" }}>Cancel</Button>
+                            <Button
+                                type="submit"
+                                variant="outlined"
+                                sx={{
+                                    borderRadius: "20px",
+                                    fontWeight: "bold",
+                                    color: "#ba343b",
+                                    border: "0.5px solid #ba343b",
+                                }}
+                            >
+                                Create
+                            </Button>
+                        </DialogActions>
+                    </form>
                 </Dialog>
 
                 <Dialog
@@ -2371,6 +2402,7 @@ const AllFolders = () => {
                                     value={digit}
                                     inputRef={otpRefs.current[index]}
                                     onChange={(e) => handleOtpChange(e.target.value, index)}
+                                    onPaste={(e) => handleOtpPaste(e, index)}
                                     variant="outlined"
                                     inputProps={{ maxLength: 1, style: { textAlign: "center", fontSize: "20px" } }}
                                     sx={{ width: "40px" }}
