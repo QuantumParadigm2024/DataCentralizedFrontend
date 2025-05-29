@@ -791,7 +791,7 @@ const AllFolders = () => {
     const handleOtpPaste = (e, index) => {
         e.preventDefault();
         const pasteData = e.clipboardData.getData("Text").trim();
-        const digits = pasteData.split("").filter(char => /\d/.test(char)); 
+        const digits = pasteData.split("").filter(char => /\d/.test(char));
 
         if (digits.length === 0) return;
 
@@ -2586,7 +2586,12 @@ const AllFolders = () => {
                 </Dialog>
 
                 <Dialog fullWidth open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)}>
-                    <Box onClick={(e) => e.stopPropagation()}>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            handleRenameFolder();
+                        }}
+                    >
                         <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>
                             Rename Folder
                         </DialogTitle>
@@ -2596,12 +2601,15 @@ const AllFolders = () => {
                                 value={renameFolderName}
                                 onChange={(e) => setRenameFolderName(e.target.value)}
                                 placeholder="Rename folder name"
+                                autoFocus
                             />
                         </DialogContent>
                         <DialogActions>
-                            <Button onClick={() => setRenameDialogOpen(false)} color="error">Cancel</Button>
+                            <Button onClick={() => setRenameDialogOpen(false)} color="error">
+                                Cancel
+                            </Button>
                             <Button
-                                onClick={handleRenameFolder}
+                                type="submit"
                                 variant="outlined"
                                 sx={{
                                     borderRadius: "20px",
@@ -2613,36 +2621,46 @@ const AllFolders = () => {
                                 Rename
                             </Button>
                         </DialogActions>
-                    </Box>
+                    </form>
                 </Dialog>
 
                 <Dialog fullWidth open={renameFileDialogOpen} onClose={() => setRenameFileDialogOpen(false)}>
-                    <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>
-                        Rename File
-                    </DialogTitle>
-                    <DialogContent>
-                        <TextField
-                            fullWidth
-                            value={renameFileName}
-                            onChange={(e) => setRenameFileName(e.target.value)}
-                            placeholder="Rename file name"
-                        />
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setRenameFileDialogOpen(false)} color="error">Cancel</Button>
-                        <Button
-                            onClick={handleRenameFile}
-                            variant="outlined"
-                            sx={{
-                                borderRadius: "20px",
-                                fontWeight: "bold",
-                                color: "#ba343b",
-                                border: "0.5px solid #ba343b"
-                            }}
-                        >
-                            Rename
-                        </Button>
-                    </DialogActions>
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();        
+                            handleRenameFile();        
+                        }}
+                    >
+                        <DialogTitle sx={{ fontSize: "16px", fontWeight: "bold", color: "#ba343b" }}>
+                            Rename File
+                        </DialogTitle>
+                        <DialogContent>
+                            <TextField
+                                fullWidth
+                                value={renameFileName}
+                                onChange={(e) => setRenameFileName(e.target.value)}
+                                placeholder="Rename file name"
+                                autoFocus 
+                            />
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setRenameFileDialogOpen(false)} color="error">
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                variant="outlined"
+                                sx={{
+                                    borderRadius: "20px",
+                                    fontWeight: "bold",
+                                    color: "#ba343b",
+                                    border: "0.5px solid #ba343b"
+                                }}
+                            >
+                                Rename
+                            </Button>
+                        </DialogActions>
+                    </form>
                 </Dialog>
             </Box >
         </>
