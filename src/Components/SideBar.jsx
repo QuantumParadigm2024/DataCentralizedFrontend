@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { Box, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider, IconButton, } from "@mui/material";
+import { Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Button } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -17,6 +18,7 @@ const SideBar = ({ drawerOpen, setDrawerOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [activeItem, setActiveItem] = useState("");
+    const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
     const decryptToken = (encryptedToken) => {
         try {
@@ -105,7 +107,7 @@ const SideBar = ({ drawerOpen, setDrawerOpen }) => {
             <List sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
                 {[
                     { text: "Profile", icon: <AccountCircleIcon sx={{ fontSize: 28 }} />, key: "profile" },
-                    { text: "Logout", icon: <LogoutIcon sx={{ fontSize: 28 }} />, key: "logout", onClick: handleLogout },
+                    { text: "Logout", icon: <LogoutIcon sx={{ fontSize: 28 }} />, key: "logout", onClick: () => setLogoutDialogOpen(true) }
                 ].map(({ text, icon, key, onClick }) => (
                     <ListItem key={key} disablePadding>
                         <ListItemButton
@@ -127,6 +129,41 @@ const SideBar = ({ drawerOpen, setDrawerOpen }) => {
                     </ListItem>
                 ))}
             </List>
+
+            <Dialog fullWidth open={logoutDialogOpen} onClose={() => setLogoutDialogOpen(false)}>
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault(); 
+                        handleLogout();     
+                    }}
+                >
+                    <DialogContent>
+                        Are you sure you want to logout?
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            onClick={() => setLogoutDialogOpen(false)}
+                            color="error"
+                            sx={{ fontWeight: "bold" }}
+                        >
+                            No
+                        </Button>
+                        <Button
+                            type="submit"
+                            autoFocus
+                            variant="outlined"
+                            sx={{
+                                borderRadius: "20px",
+                                fontWeight: "bold",
+                                color: "#ba343b",
+                                border: "0.5px solid #ba343b",
+                            }}
+                        >
+                            Yes
+                        </Button>
+                    </DialogActions>
+                </form>
+            </Dialog>
         </Box>
     );
 };
